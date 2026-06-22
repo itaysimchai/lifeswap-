@@ -1,0 +1,14 @@
+# Netlify configuration for the LifeSwap Next.js app.
+# If you connect the parent repo (LifeSwap/) to Netlify, set the site's
+# "Base directory" to `lifeswap` so this file and package.json are found.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  # Next.js 16 requires a modern Node runtime.
+  NODE_VERSION = "20"
+
+# The official Next.js runtime — handles SSR, routing, and image optimization.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
