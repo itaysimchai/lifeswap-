@@ -40,6 +40,10 @@ firestore-debug.log*
 ui-debug.log*
 .firebase/
 
+# service-account keys — NEVER commit
+serviceAccount*.json
+*firebase-adminsdk*.json
+
 # vercel
 .vercel
 

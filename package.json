@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "emulators": "firebase emulators:start --only auth,firestore",
-    "seed": "tsx scripts/seed-firestore.ts"
+    "seed": "tsx scripts/seed-firestore.ts",
+    "seed:prod": "tsx scripts/seed-production.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
