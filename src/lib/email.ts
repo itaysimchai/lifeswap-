@@ -1,12 +1,7 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
-
 /**
- * Booking emails. Content + calendar links are built here, and messages are
- * QUEUED into the `mail` collection — the format the Firebase "Trigger Email"
- * extension consumes. Actual delivery requires that extension (or an equivalent
- * Cloud Function) installed with an email provider (SendGrid/SMTP) configured.
- * Until then the docs are created (inspectable in the Emulator UI) but unsent.
+ * Booking emails. The HTML templates + calendar links are built here (pure, so
+ * they're reused by the server route). Delivery goes through the server route
+ * `/api/send-booking-emails`, which sends via Resend using a server-only API key.
  */
 
 const APP_NAME = "LifeSwap";
@@ -142,26 +137,15 @@ export function buildProviderEmail(d: BookingDetails) {
   };
 }
 
-/** Queue the customer + provider booking emails (Trigger Email extension format). */
-export async function enqueueBookingEmails(d: BookingDetails): Promise<void> {
-  const writes: Promise<unknown>[] = [];
-  if (d.requesterEmail) {
-    writes.push(
-      addDoc(collection(db, "mail"), {
-        to: d.requesterEmail,
-        message: buildCustomerEmail(d),
-        createdAt: serverTimestamp(),
-      })
-    );
-  }
-  if (d.providerEmail) {
-    writes.push(
-      addDoc(collection(db, "mail"), {
-        to: d.providerEmail,
-        message: buildProviderEmail(d),
-        createdAt: serverTimestamp(),
-      })
-    );
-  }
-  await Promise.all(writes);
+/**
+ * Send the customer + provider booking emails by calling the server route
+ * (which holds the Resend API key). Best-effort: callers wrap this in try/catch
+ * so a mail hiccup never breaks a booking.
+ */
+export async function sendBookingEmails(d: BookingDetails): Promise<void> {
+  await fetch("/api/send-booking-emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(d),
+  });
 }

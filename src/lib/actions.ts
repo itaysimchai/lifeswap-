@@ -10,7 +10,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { enqueueBookingEmails } from "./email";
+import { sendBookingEmails } from "./email";
 import type {
   PaymentMethod,
   Service,
@@ -182,7 +182,7 @@ export async function bookService(
     const providerEmail = providerSnap.exists()
       ? ((providerSnap.data().email as string | undefined) ?? null)
       : null;
-    await enqueueBookingEmails({
+    await sendBookingEmails({
       serviceTitle: service.title,
       providerName: service.providerName,
       providerEmail,
