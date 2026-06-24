@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Send, MessageSquare } from "lucide-react";
+import { Send, MessageSquare, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,10 +44,22 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Default-select the first conversation once chats load.
+  // On phones we show ONE pane at a time (list, then the conversation). On
+  // larger screens both panes sit side by side, so we can auto-open the first
+  // chat there. Auto-opening on a phone would hide the list behind a chat.
+  const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
-    if (!selectedId && chats.length > 0) setSelectedId(chats[0].id);
-  }, [chats, selectedId]);
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Default-select the first conversation once chats load (desktop only).
+  useEffect(() => {
+    if (isDesktop && !selectedId && chats.length > 0) setSelectedId(chats[0].id);
+  }, [isDesktop, chats, selectedId]);
 
   const selected = useMemo(
     () => chats.find((c) => c.id === selectedId) ?? null,
@@ -80,9 +92,14 @@ export default function MessagesPage() {
         </p>
       </div>
 
-      <div className="flex h-[600px] overflow-hidden rounded-xl border border-border bg-card">
-        {/* Conversation list */}
-        <div className="flex w-80 shrink-0 flex-col border-r border-border">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[420px] overflow-hidden rounded-xl border border-border bg-card md:h-[600px]">
+        {/* Conversation list — full width on phones; hidden once a chat is open */}
+        <div
+          className={cn(
+            "flex-col border-border md:flex md:w-80 md:shrink-0 md:border-r",
+            selected ? "hidden md:flex" : "flex w-full"
+          )}
+        >
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="p-4 text-sm text-muted-foreground">Loading…</div>
@@ -124,11 +141,19 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Chat area */}
-        <div className="flex flex-1 flex-col">
+        {/* Chat area — full width on phones; hidden until a chat is opened */}
+        <div className={cn("flex-1 flex-col", selected ? "flex" : "hidden md:flex")}>
           {selected && uid ? (
             <>
               <div className="flex items-center gap-3 border-b border-border p-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="-ml-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className="text-sm">
                     {initials(otherName(selected, uid))}

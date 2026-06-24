@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers/Providers";
@@ -31,6 +31,17 @@ export const metadata: Metadata = {
     title: "LifeSwap — Find and offer services",
     description: "A simple marketplace for services.",
   },
+};
+
+// Ensures the page fits the device width on phones (no zoomed-out "tiny" layout)
+// while still allowing users to pinch-zoom for accessibility.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
 };
 
 export default function RootLayout({

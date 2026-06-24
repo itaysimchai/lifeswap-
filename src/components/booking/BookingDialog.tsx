@@ -171,7 +171,7 @@ export function BookingDialog({
 
   return (
     <Dialog open={!!service} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="gap-6 p-7 sm:max-w-lg sm:p-8">
+      <DialogContent className="gap-6 sm:max-w-lg">
         {service && done && (
           <>
             <DialogHeader>
@@ -314,7 +314,7 @@ export function BookingDialog({
                       type="button"
                       onClick={() => setMethod(m.id)}
                       className={cn(
-                        "relative flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors",
+                        "relative flex min-w-0 flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors",
                         active
                           ? "border-primary bg-primary/5 ring-1 ring-primary"
                           : "border-border bg-card hover:border-primary/40"
@@ -336,7 +336,7 @@ export function BookingDialog({
                       <span className="text-sm font-semibold text-foreground">
                         {m.title}
                       </span>
-                      <span className="text-[11px] leading-tight text-muted-foreground">
+                      <span className="break-words text-[11px] leading-tight text-muted-foreground">
                         {m.subtitle}
                       </span>
                     </button>
