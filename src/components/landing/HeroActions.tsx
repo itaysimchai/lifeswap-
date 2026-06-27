@@ -11,7 +11,7 @@ export function HeroActions() {
   const home = profile?.isProvider ? "/my-dashboard" : "/dashboard";
 
   return (
-    <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+    <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:items-start lg:justify-start">
       {user ? (
         <>
           <Button asChild size="lg" className="w-full sm:w-auto">

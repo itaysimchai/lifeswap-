@@ -2,23 +2,17 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MessagesSquare, ShieldCheck, Wallet, Loader2 } from "lucide-react";
+import { ShieldCheck, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroActions } from "@/components/landing/HeroActions";
-import WhisperText from "@/components/ui/whisper-text";
+import { HeroFlip } from "@/components/landing/HeroFlip";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { ExpertsReel } from "@/components/landing/ExpertsReel";
+import { FeaturedExperts } from "@/components/landing/FeaturedExperts";
 import { ProviderShowcase } from "@/components/landing/ProviderShowcase";
 import { Faq } from "@/components/landing/Faq";
 import { useAuth } from "@/providers/AuthProvider";
 import { homePathForProfile } from "@/lib/auth";
-
-const ASSURANCES = [
-  { icon: ShieldCheck, label: "Approved providers" },
-  { icon: MessagesSquare, label: "Direct messaging" },
-  { icon: Wallet, label: "Free to get started" },
-];
 
 export default function LandingPage() {
   const router = useRouter();
@@ -42,40 +36,46 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="flex-1">
-        {/* Hero */}
+        {/* Hero — the experts lead the page. Copy on the left, a "hand" of real,
+            bookable experts on the right as the signature element. */}
         <section className="relative overflow-hidden border-b border-border">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-primary/[0.07] via-primary/[0.02] to-transparent"
+            className="pointer-events-none absolute -right-32 -top-24 h-[440px] w-[440px] rounded-full bg-primary/[0.06] blur-3xl"
           />
           <div className="container-page relative">
-            <div className="mx-auto max-w-4xl py-24 text-center sm:py-32">
-              <WhisperText
-                text="A simpler way to find and offer services"
-                className="justify-center text-sm font-medium tracking-wide text-muted-foreground"
-                delay={55}
-                duration={0.5}
-                y={12}
-              />
+            <div className="grid items-center gap-14 py-20 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:py-28">
+              {/* Left: the pitch */}
+              <div className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-signature">
+                  Advice from people who&apos;ve done it
+                </p>
 
-              <h1 className="mx-auto mt-7 text-3xl font-bold leading-[1.1] tracking-tight text-foreground sm:whitespace-nowrap sm:text-4xl lg:text-5xl">
-                Book an expert. Decide smarter.
-              </h1>
-
-              <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-                Book a session with a vetted expert, get advice from someone who&apos;s
-                been there, and move forward with confidence.
-              </p>
-
-              <HeroActions />
-
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-                {ASSURANCES.map((a) => (
-                  <span key={a.label} className="inline-flex items-center gap-2">
-                    <a.icon className="h-4 w-4 text-primary" />
-                    {a.label}
+                <h1 className="mt-5 text-4xl font-semibold leading-[1.05] text-foreground sm:text-5xl lg:text-[3.5rem]">
+                  Book an{" "}
+                  <span className="underline decoration-signature decoration-[3px] underline-offset-[7px]">
+                    expert
                   </span>
-                ))}
+                  .<br className="hidden sm:block" /> Decide smarter.
+                </h1>
+
+                <p className="mx-auto mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground lg:mx-0">
+                  Sit down with someone who&apos;s already been where you&apos;re
+                  headed. Pick a time, pay once, and the conversation opens the
+                  moment it&apos;s booked.
+                </p>
+
+                <HeroActions />
+
+                <p className="mt-9 inline-flex items-center justify-center gap-2 text-sm text-muted-foreground lg:justify-start">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+                  Every expert is application-reviewed before they can take a booking.
+                </p>
+              </div>
+
+              {/* Right: experts deck that flips to a live flow demo on click */}
+              <div className="relative">
+                <HeroFlip />
               </div>
             </div>
           </div>
@@ -84,26 +84,8 @@ export default function LandingPage() {
         {/* How it works */}
         <HowItWorks />
 
-        {/* Our experts */}
-        <section
-          id="experts"
-          className="scroll-mt-20 overflow-hidden border-t border-border py-20 sm:py-28"
-        >
-          <div className="container-page">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-                Our experts
-              </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Learn from people who&apos;ve done it
-              </h2>
-            </div>
-          </div>
-
-          <div className="container-page mt-14">
-            <ExpertsReel />
-          </div>
-        </section>
+        {/* Our experts — four featured people: their careers + how they help */}
+        <FeaturedExperts />
 
         {/* Become a provider */}
         <ProviderShowcase />

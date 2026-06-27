@@ -27,6 +27,22 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [redirectQ, setRedirectQ] = useState("");
+
+  // Carry a ?redirect=/path target through registration so a new user who came
+  // from a gated link (e.g. "Become a provider") lands there after signing up.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("redirect");
+    if (p && p.startsWith("/")) setRedirectQ(`?redirect=${encodeURIComponent(p)}`);
+  }, []);
+
+  const explicitRedirect = () => {
+    const p =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("redirect")
+        : null;
+    return p && p.startsWith("/") ? p : null;
+  };
 
   const {
     register,
@@ -38,7 +54,7 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    if (user) router.replace("/dashboard");
+    if (user) router.replace(explicitRedirect() ?? "/dashboard");
   }, [user, router]);
 
   const onSubmit = async (data: RegisterFormData) => {
@@ -51,7 +67,7 @@ export default function RegisterPage() {
       const displayName = `${data.firstName} ${data.lastName}`.trim();
       await updateProfile(cred.user, { displayName });
       await ensureUserDoc(cred.user, displayName);
-      router.push("/dashboard");
+      router.push(explicitRedirect() ?? "/dashboard");
     } catch (e) {
       setError("root", { message: authErrorMessage(e) });
     }
@@ -61,7 +77,7 @@ export default function RegisterPage() {
     try {
       const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       await ensureUserDoc(cred.user);
-      router.push("/dashboard");
+      router.push(explicitRedirect() ?? "/dashboard");
     } catch (e) {
       setError("root", { message: authErrorMessage(e) });
     }
@@ -183,7 +199,10 @@ export default function RegisterPage() {
         {/* Footer */}
         <div className="flex justify-center gap-1 text-sm text-muted-foreground">
           <p>Already have an account?</p>
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            href={`/login${redirectQ}`}
+            className="font-medium text-primary hover:underline"
+          >
             Sign in
           </Link>
         </div>

@@ -35,8 +35,18 @@
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
 
-  /* Typography */
+  /* Signature accent — warm editorial gold. Pairs with the trust-blue to read
+     "advisory / premium" (think FT, law firms). Used sparingly: the hero
+     keyword underline and the "available now" status only. */
+  --color-signature: #a16207;
+  --color-signature-foreground: #ffffff;
+
+  /* Typography
+     Display = Fraunces, an optical old-style serif with real personality, used
+     with restraint on h1/h2 only — it carries the "learn from people who've
+     done it" editorial authority. Body/UI stays Inter. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -58,6 +68,10 @@
   --color-border: #334155;
   --color-input: #334155;
   --color-ring: #3b82f6;
+
+  /* Lighter gold on the deep slate so the accent stays legible in dark mode */
+  --color-signature: #fbbf24;
+  --color-signature-foreground: #0b1220;
 }
 
 /* NOTE: do NOT add an unlayered `* { padding:0; margin:0 }` reset here — in
@@ -76,9 +90,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* h3–h6 are small UI headings — kept on Inter for legibility at small sizes. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Display moments only: hero + section heads wear Fraunces. opsz responds to
+   size automatically, so big headings get the true display cut. Restraint is
+   the point — the serif is the signature, so it appears in few places. */
+h1, h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.025em;
+}
+
+/* Opt-out hook for h1/h2 that are really UI chrome, not editorial display. */
+.font-ui {
+  font-family: var(--font-sans);
   letter-spacing: -0.02em;
 }
 
@@ -156,6 +186,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Horizontal rails (experts by category) — hide the scrollbar, keep scrolling. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .line-clamp-2 {

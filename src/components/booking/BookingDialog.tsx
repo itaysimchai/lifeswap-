@@ -150,10 +150,44 @@ export function BookingDialog({
 
   const canPay = !!date && !!time && !!method && !paying;
 
+  // Real Stripe is active only when a publishable key is configured. Without it
+  // the dialog keeps its original demo behaviour, so the app still works.
+  const stripeEnabled = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
   async function handlePay() {
     if (!service || !profile || !date || !time || !method) return;
     setPaying(true);
     setError(null);
+
+    // Card via real Stripe → redirect to Stripe-hosted checkout. The booking is
+    // created server-side after Stripe confirms the charge (see PAYMENTS.md).
+    if (method === "stripe" && stripeEnabled && service.price > 0) {
+      try {
+        const res = await fetch("/api/checkout/stripe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            serviceId: service.id,
+            date,
+            time,
+            requesterId: profile.uid,
+            providerId: service.providerId,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) {
+          throw new Error(data.error ?? "Could not start checkout.");
+        }
+        window.location.href = data.url; // leaves the app for Stripe
+        return; // keep the spinner during navigation
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not start checkout.");
+        setPaying(false);
+        return;
+      }
+    }
+
+    // PayPal (and the demo card path) still use the simulated booking for now.
     try {
       await bookService(profile, service, { date, time, paymentMethod: method });
       setPaying(false);
@@ -359,7 +393,9 @@ export function BookingDialog({
             </Button>
 
             <p className="-mt-1 text-center text-[11px] text-muted-foreground">
-              Demo checkout — no real charge is made. Booking is confirmed instantly.
+              {stripeEnabled && method === "stripe" && service.price > 0
+                ? "Secure checkout via Stripe. You'll be redirected to pay."
+                : "Demo checkout — no real charge is made. Booking is confirmed instantly."}
             </p>
           </>
         )}

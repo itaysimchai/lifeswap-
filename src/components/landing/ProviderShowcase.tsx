@@ -39,6 +39,14 @@ export function ProviderShowcase() {
         <div className="grid items-center gap-8 rounded-3xl bg-primary/10 p-5 sm:p-8 md:grid-cols-2 lg:gap-12 lg:p-12">
           {/* Mock provider dashboard */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-xl shadow-primary/10 sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Provider dashboard
+              </span>
+              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Preview
+              </span>
+            </div>
             <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <Tab active>Services</Tab>
               <Tab>Bookings</Tab>

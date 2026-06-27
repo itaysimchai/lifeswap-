@@ -23,6 +23,14 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [redirectQ, setRedirectQ] = useState("");
+
+  // Keep the ?redirect=/path target when sending people to register, so the
+  // sign-in-then-land-on-target flow survives the login ↔ register toggle.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("redirect");
+    if (p && p.startsWith("/")) setRedirectQ(`?redirect=${encodeURIComponent(p)}`);
+  }, []);
 
   const {
     register,
@@ -135,7 +143,10 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="flex justify-center gap-1 text-sm text-muted-foreground">
           <p>Don&apos;t have an account?</p>
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link
+            href={`/register${redirectQ}`}
+            className="font-medium text-primary hover:underline"
+          >
             Sign up
           </Link>
         </div>
