@@ -22,7 +22,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "LifeSwap — Find and offer services",
+    default: "LifeSwap",
     template: "%s | LifeSwap",
   },
   description:

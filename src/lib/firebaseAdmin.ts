@@ -13,7 +13,7 @@
  *    from the downloaded JSON). These let the server prove it's really you.
  */
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true";
 
@@ -41,8 +41,25 @@ function createApp(): App {
   });
 }
 
-// Reuse one app across hot-reloads / serverless invocations (initializeApp
-// throws if called twice).
-const app = getApps()[0] ?? createApp();
+// Create the Admin app + Firestore LAZILY, on first actual use. `next build`
+// imports this module while collecting the API routes but never runs a handler,
+// so deferring init keeps a missing service-account key from crashing the build.
+// (Reuse one app across hot-reloads / serverless invocations.)
+let _adminDb: Firestore | null = null;
+function adminDbInstance(): Firestore {
+  if (!_adminDb) {
+    const app: App = getApps()[0] ?? createApp();
+    _adminDb = getFirestore(app);
+  }
+  return _adminDb;
+}
 
-export const adminDb = getFirestore(app);
+// A thin proxy so existing call sites (`adminDb.doc(...)`, `adminDb.collection(...)`)
+// are unchanged, while the real client is only built at first use at runtime.
+export const adminDb: Firestore = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    const db = adminDbInstance();
+    const value = Reflect.get(db as object, prop);
+    return typeof value === "function" ? value.bind(db) : value;
+  },
+});
