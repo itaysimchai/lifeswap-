@@ -1,5 +1,4 @@
 import React from "react";
-import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -62,10 +61,7 @@ function initials(name: string) {
 
 function ExpertCard({ expert }: { expert: Expert }) {
   return (
-    <Link
-      href="/dashboard"
-      className="hover-lift flex h-full flex-col rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40"
-    >
+    <article className="flex h-full flex-col rounded-2xl border border-border bg-card p-6">
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16 shrink-0">
           <AvatarImage src={expert.src} alt={expert.name} />
@@ -89,7 +85,7 @@ function ExpertCard({ expert }: { expert: Expert }) {
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
         {expert.help}
       </p>
-    </Link>
+    </article>
   );
 }
 

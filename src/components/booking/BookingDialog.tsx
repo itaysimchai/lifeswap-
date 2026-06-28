@@ -26,6 +26,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useBookedSlots } from "@/hooks/useBookedSlots";
 import { bookService } from "@/lib/actions";
 import { googleCalendarLink } from "@/lib/email";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import type { PaymentMethod, Service } from "@/lib/types";
 
 const SESSION_MINUTES = 60;
@@ -153,6 +154,7 @@ export function BookingDialog({
   // Real Stripe is active only when a publishable key is configured. Without it
   // the dialog keeps its original demo behaviour, so the app still works.
   const stripeEnabled = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const paypalEnabled = !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   async function handlePay() {
     if (!service || !profile || !date || !time || !method) return;
@@ -381,22 +383,98 @@ export function BookingDialog({
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={!canPay}
-              loading={paying}
-              onClick={handlePay}
-            >
-              {!paying && <Lock className="h-4 w-4" />}
-              Pay now · {formatPrice(service.price)}
-            </Button>
+            {method === "paypal" && paypalEnabled && service.price > 0 ? (
+              <div className="space-y-2">
+                {(!date || !time) && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Pick a date and time above to pay with PayPal.
+                  </p>
+                )}
+                <div className={cn(!date || !time ? "pointer-events-none opacity-50" : "")}>
+                  <PayPalScriptProvider
+                    options={{
+                      clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string,
+                      currency: "USD",
+                      intent: "capture",
+                    }}
+                  >
+                    <PayPalButtons
+                      style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
+                      forceReRender={[service.id, date, time]}
+                      disabled={!date || !time || paying}
+                      createOrder={async () => {
+                        if (!profile) throw new Error("Not signed in");
+                        const res = await fetch("/api/paypal/create-order", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            serviceId: service.id,
+                            requesterId: profile.uid,
+                            providerId: service.providerId,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok || !data.id) {
+                          throw new Error(data.error ?? "Could not start PayPal checkout.");
+                        }
+                        return data.id as string;
+                      }}
+                      onApprove={async (data) => {
+                        if (!profile || !date || !time) return;
+                        setPaying(true);
+                        setError(null);
+                        try {
+                          const res = await fetch("/api/paypal/capture-order", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              orderId: data.orderID,
+                              serviceId: service.id,
+                              date,
+                              time,
+                              requesterId: profile.uid,
+                              providerId: service.providerId,
+                            }),
+                          });
+                          const out = await res.json();
+                          if (!res.ok || !out.ok) {
+                            throw new Error(out.error ?? "Payment could not be confirmed.");
+                          }
+                          setDone(true);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Something went wrong.");
+                        } finally {
+                          setPaying(false);
+                        }
+                      }}
+                      onError={() => setError("PayPal had a problem. Please try again.")}
+                    />
+                  </PayPalScriptProvider>
+                </div>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  You pay securely on PayPal. Your booking is created only after payment.
+                </p>
+              </div>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={!canPay}
+                  loading={paying}
+                  onClick={handlePay}
+                >
+                  {!paying && <Lock className="h-4 w-4" />}
+                  Pay now · {formatPrice(service.price)}
+                </Button>
 
-            <p className="-mt-1 text-center text-[11px] text-muted-foreground">
-              {stripeEnabled && method === "stripe" && service.price > 0
-                ? "Secure checkout via Stripe. You'll be redirected to pay."
-                : "Demo checkout — no real charge is made. Booking is confirmed instantly."}
-            </p>
+                <p className="-mt-1 text-center text-[11px] text-muted-foreground">
+                  {stripeEnabled && method === "stripe" && service.price > 0
+                    ? "Secure checkout via Stripe. You'll be redirected to pay."
+                    : "Demo checkout — no real charge is made. Booking is confirmed instantly."}
+                </p>
+              </>
+            )}
           </>
         )}
       </DialogContent>

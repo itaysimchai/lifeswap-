@@ -40,6 +40,21 @@ export function authErrorMessage(e: unknown): string {
     case "auth/popup-closed-by-user":
     case "auth/cancelled-popup-request":
       return "Sign-in was cancelled.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the sign-in popup. Allow popups for this site and try again.";
+    case "auth/operation-not-allowed":
+      return "Google sign-in isn't enabled for this project. Enable it in Firebase → Authentication → Sign-in method.";
+    case "auth/unauthorized-domain":
+      return "This site's domain isn't authorized. Add it in Firebase → Authentication → Settings → Authorized domains.";
+    case "auth/account-exists-with-different-credential":
+      return "You already signed up with this email using a different method. Sign in that way instead.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection — in local dev, make sure the Firebase emulator is running.";
+    case "auth/api-key-not-valid":
+    case "auth/invalid-api-key":
+      return "App configuration error (invalid Firebase API key).";
+    case "auth/internal-error":
+      return "Sign-in failed. Please try again.";
     default:
       return "Something went wrong. Please try again.";
   }

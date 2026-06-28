@@ -74,11 +74,11 @@ interface SeedService {
 }
 
 const SERVICES: SeedService[] = [
-  { id: "s_react", providerUid: "u_maya", title: "React & Next.js code review", description: "I'll review your React/Next.js codebase and pair with you on architecture, performance, and testing. 8 years shipping production frontends.", category: "Software Engineering", price: 0, linkedin: "https://www.linkedin.com/in/maya-chen" },
-  { id: "s_career", providerUid: "u_maya", title: "Tech career & interview coaching", description: "Mock interviews, resume teardown, and a concrete plan to land your next engineering role. I've sat on both sides of the hiring table.", category: "Career Coaching", price: 0, linkedin: "https://www.linkedin.com/in/maya-chen" },
-  { id: "s_design", providerUid: "u_leo", title: "Product design critique", description: "Bring your app or landing page and I'll give you a structured UX/visual critique with prioritized, actionable fixes.", category: "Design", price: 0, linkedin: "https://www.linkedin.com/in/leo-martins" },
+  { id: "s_react", providerUid: "u_maya", title: "React & Next.js code review", description: "I'll review your React/Next.js codebase and pair with you on architecture, performance, and testing. 8 years shipping production frontends.", category: "Software Engineering", price: 80, linkedin: "https://www.linkedin.com/in/maya-chen" },
+  { id: "s_career", providerUid: "u_maya", title: "Tech career & interview coaching", description: "Mock interviews, resume teardown, and a concrete plan to land your next engineering role. I've sat on both sides of the hiring table.", category: "Career Coaching", price: 60, linkedin: "https://www.linkedin.com/in/maya-chen" },
+  { id: "s_design", providerUid: "u_leo", title: "Product design critique", description: "Bring your app or landing page and I'll give you a structured UX/visual critique with prioritized, actionable fixes.", category: "Design", price: 50, linkedin: "https://www.linkedin.com/in/leo-martins" },
   // Intentionally no LinkedIn — demonstrates the link is optional / provider-controlled.
-  { id: "s_ml", providerUid: "u_leo", title: "Intro to applied machine learning", description: "A friendly, hands-on session to get you from zero to a working ML model, with no heavy math prerequisites.", category: "Data Science & AI", price: 0 },
+  { id: "s_ml", providerUid: "u_leo", title: "Intro to applied machine learning", description: "A friendly, hands-on session to get you from zero to a working ML model, with no heavy math prerequisites.", category: "Data Science & AI", price: 70 },
 ];
 
 async function seedUsers() {
