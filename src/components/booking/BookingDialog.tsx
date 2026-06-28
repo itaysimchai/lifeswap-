@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { auth } from "@/lib/firebase";
 import { useBookedSlots } from "@/hooks/useBookedSlots";
 import { bookService } from "@/lib/actions";
 import { googleCalendarLink } from "@/lib/email";
@@ -450,9 +451,13 @@ export function BookingDialog({
                         setPaying(true);
                         setError(null);
                         try {
+                          const idToken = await auth.currentUser?.getIdToken();
                           const res = await fetch("/api/paypal/capture-order", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${idToken ?? ""}`,
+                            },
                             body: JSON.stringify({
                               orderId: data.orderID,
                               serviceId: service.id,

@@ -21,7 +21,7 @@ import { useAuth } from "@/providers/AuthProvider";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [redirectQ, setRedirectQ] = useState("");
 
@@ -40,8 +40,8 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
   useEffect(() => {
-    if (user) router.replace(profile?.isProvider ? "/my-dashboard" : "/dashboard");
-  }, [user, profile, router]);
+    if (user) router.replace("/home");
+  }, [user, router]);
 
   const explicitRedirect = () => {
     const p =

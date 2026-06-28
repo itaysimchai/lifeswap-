@@ -1,18 +1,31 @@
 /**
  * POST /api/paypal/capture-order
  *   { orderId, serviceId, date, time, requesterId, providerId }
- * Captures the PayPal order, verifies it really completed and that the captured
- * amount covers the service price (read server-side), then creates the confirmed
- * booking. Idempotent on the order id via createConfirmedBooking.
+ *   Header: Authorization: Bearer <Firebase ID token>
+ *
+ * Captures the PayPal order, verifies it completed and that the amount covers
+ * the service price (read server-side), then creates the confirmed booking.
+ * If anything fails AFTER the capture, the charge is refunded automatically so
+ * the customer is never left paying for a booking that wasn't created.
  */
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { createConfirmedBooking } from "@/lib/serverBooking";
-import { paypalAccessToken, paypalBase } from "@/lib/paypal";
+import { paypalAccessToken, paypalBase, paypalRefund } from "@/lib/paypal";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  // Verify the caller (the buyer) before moving any money.
+  const authz = req.headers.get("authorization") ?? "";
+  const idToken = authz.startsWith("Bearer ") ? authz.slice(7) : "";
+  let callerUid: string;
+  try {
+    callerUid = (await adminAuth.verifyIdToken(idToken)).uid;
+  } catch {
+    return NextResponse.json({ error: "You're not signed in." }, { status: 401 });
+  }
+
   let body: {
     orderId?: string;
     serviceId?: string;
@@ -31,6 +44,12 @@ export async function POST(req: Request) {
   if (!orderId || !serviceId || !date || !time || !requesterId || !providerId) {
     return NextResponse.json({ error: "Missing booking details" }, { status: 400 });
   }
+  if (callerUid !== requesterId) {
+    return NextResponse.json(
+      { error: "You can't complete someone else's booking." },
+      { status: 403 }
+    );
+  }
 
   // 1) Capture the money, then CHECK PayPal says it completed.
   const token = await paypalAccessToken();
@@ -48,6 +67,14 @@ export async function POST(req: Request) {
   const paid = Number(
     cap?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value ?? 0
   );
+  const captureId = cap?.purchase_units?.[0]?.payments?.captures?.[0]?.id as
+    | string
+    | undefined;
+
+  // From here the money is captured — any failure must auto-refund.
+  const refund = async () => {
+    if (captureId) await paypalRefund(captureId).catch(() => {});
+  };
 
   // 2) Look up names/emails/price server-side — never trust the browser.
   const [reqSnap, provSnap, svcSnap] = await Promise.all([
@@ -57,10 +84,14 @@ export async function POST(req: Request) {
   ]);
   const dbPrice = Number(svcSnap.data()?.price) || 0;
   if (paid + 1e-9 < dbPrice) {
-    return NextResponse.json({ error: "Amount mismatch." }, { status: 402 });
+    await refund();
+    return NextResponse.json(
+      { error: "Amount mismatch — you were refunded." },
+      { status: 402 }
+    );
   }
 
-  // 3) Only now create the booking (claim slot, open chat, send emails).
+  // 3) Only now create the booking. If it fails, refund the capture.
   try {
     const result = await createConfirmedBooking({
       serviceId,
@@ -76,12 +107,12 @@ export async function POST(req: Request) {
       price: paid,
       paymentMethod: "paypal",
       paymentRef: orderId,
+      paymentCaptureId: captureId,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Could not confirm booking." },
-      { status: 402 }
-    );
+    await refund();
+    const msg = e instanceof Error ? e.message : "Could not confirm booking.";
+    return NextResponse.json({ error: `${msg} You were refunded.` }, { status: 402 });
   }
 }

@@ -12,7 +12,7 @@ import {
   Settings,
   User,
   LayoutDashboard,
-  CalendarDays,
+  Home,
   Briefcase,
   ShieldCheck,
   UserPlus,
@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/providers/AuthProvider";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { homePathForProfile } from "@/lib/auth";
 
 function initialsFrom(name?: string | null, email?: string | null) {
@@ -42,6 +43,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
+  const hasUnread = useUnreadMessages(user?.uid);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const displayName = profile?.displayName ?? user?.displayName ?? "";
@@ -52,14 +54,14 @@ export function Navbar() {
   // Top-bar quick links for signed-in users on the landing page (host-first order).
   const topLinks = isProvider
     ? [
-        { href: "/my-dashboard", label: "My Dashboard" },
+        { href: "/home", label: "Home" },
         { href: "/my-services", label: "My Services" },
         { href: "/messages", label: "Messages" },
         { href: "/dashboard", label: "Browse" },
       ]
     : [
+        { href: "/home", label: "Home" },
         { href: "/dashboard", label: "Browse services" },
-        { href: "/my-dashboard", label: "My Dashboard" },
         { href: "/messages", label: "Messages" },
       ];
 
@@ -120,10 +122,13 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Link href="/messages">
-                  <Button variant="ghost" size="icon" className="hidden sm:flex" aria-label="Messages">
+                <Link href="/messages" className="relative hidden sm:inline-flex">
+                  <Button variant="ghost" size="icon" aria-label="Messages">
                     <MessageSquare className="h-5 w-5" />
                   </Button>
+                  {hasUnread && (
+                    <span className="pointer-events-none absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-destructive ring-2 ring-background" />
+                  )}
                 </Link>
 
                 <DropdownMenu>
@@ -150,9 +155,9 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/my-dashboard">
-                        <CalendarDays className="mr-2 h-4 w-4" />
-                        My Dashboard
+                      <Link href="/home">
+                        <Home className="mr-2 h-4 w-4" />
+                        Home
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -233,8 +238,8 @@ export function Navbar() {
             <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
               <LayoutDashboard className="h-4 w-4" /> Browse services
             </Link>
-            <Link href="/my-dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
-              <CalendarDays className="h-4 w-4" /> My Dashboard
+            <Link href="/home" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Home className="h-4 w-4" /> Home
             </Link>
             <Link href="/messages" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
               <MessageSquare className="h-4 w-4" /> Messages

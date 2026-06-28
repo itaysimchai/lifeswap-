@@ -9,7 +9,7 @@ import {
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { auth, db } from "./firebase";
 import { sendBookingEmails } from "./email";
 import type {
   PaymentMethod,
@@ -65,6 +65,7 @@ export async function createService(
   const ref = await addDoc(collection(db, "services"), {
     providerId: profile.uid,
     providerName: profile.displayName,
+    providerPhotoURL: profile.photoURL ?? null,
     ...serviceFields(input),
     status: "active" as ServiceStatus,
     createdAt: serverTimestamp(),
@@ -166,6 +167,7 @@ export async function bookService(
       serviceTitle: service.title,
       lastMessage: opener,
       lastMessageAt: serverTimestamp(),
+      lastSenderId: requester.uid,
       createdAt: serverTimestamp(),
     },
     { merge: true }
@@ -255,7 +257,36 @@ export async function sendMessage(
   await updateDoc(doc(db, "chats", chatId), {
     lastMessage: trimmed,
     lastMessageAt: serverTimestamp(),
+    lastSenderId: senderId,
   });
+}
+
+/** Mark a conversation as read for a user (clears its unread dot). */
+export async function markChatRead(chatId: string, uid: string): Promise<void> {
+  await updateDoc(doc(db, "chats", chatId), {
+    [`lastRead.${uid}`]: serverTimestamp(),
+  });
+}
+
+/**
+ * Cancel a booking. The server verifies who you are, issues the PayPal refund
+ * per policy, frees the slot, and notifies the chat. Returns the refunded amount.
+ */
+export async function cancelBooking(
+  bookingId: string
+): Promise<{ refundAmount: number }> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("You're not signed in.");
+  const res = await fetch("/api/cancel-booking", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ bookingId }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error ?? "Could not cancel the session.");
+  }
+  return { refundAmount: Number(data.refundAmount) || 0 };
 }
 
 // ---- Provider applications -----------------------------------------------

@@ -66,22 +66,16 @@ export function safeRedirect(target: string | null | undefined): string {
 }
 
 /**
- * Where a signed-in person belongs: hosts default to their dashboard, everyone
- * else (members + admins) to the browse/services page. Admins reach the admin
- * panel from the account menu.
+ * Where a signed-in person lands: the personalized home (`/home`), which adapts
+ * to the role (member vs host). Admins reach the admin panel from the menu.
  */
 export function homePathForProfile(
-  profile: { isProvider?: boolean } | null | undefined
+  _profile?: { isProvider?: boolean } | null
 ): string {
-  return profile?.isProvider ? "/my-dashboard" : "/dashboard";
+  return "/home";
 }
 
-/** Async variant used right after sign-in, before the profile snapshot loads. */
-export async function homePathFor(uid: string): Promise<string> {
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-    return homePathForProfile({ isProvider: snap.data()?.isProvider === true });
-  } catch {
-    return "/dashboard";
-  }
+/** Async variant kept for callers that await it right after sign-in. */
+export async function homePathFor(_uid?: string): Promise<string> {
+  return "/home";
 }

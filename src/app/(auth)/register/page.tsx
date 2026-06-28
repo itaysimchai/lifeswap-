@@ -54,7 +54,7 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    if (user) router.replace(explicitRedirect() ?? "/dashboard");
+    if (user) router.replace(explicitRedirect() ?? "/home");
   }, [user, router]);
 
   const onSubmit = async (data: RegisterFormData) => {
@@ -67,7 +67,7 @@ export default function RegisterPage() {
       const displayName = `${data.firstName} ${data.lastName}`.trim();
       await updateProfile(cred.user, { displayName });
       await ensureUserDoc(cred.user, displayName);
-      router.push(explicitRedirect() ?? "/dashboard");
+      router.push(explicitRedirect() ?? "/home");
     } catch (e) {
       setError("root", { message: authErrorMessage(e) });
     }
@@ -77,7 +77,7 @@ export default function RegisterPage() {
     try {
       const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       await ensureUserDoc(cred.user);
-      router.push(explicitRedirect() ?? "/dashboard");
+      router.push(explicitRedirect() ?? "/home");
     } catch (e) {
       setError("root", { message: authErrorMessage(e) });
     }

@@ -3,7 +3,10 @@ import { Resend } from "resend";
 import {
   buildCustomerEmail,
   buildProviderEmail,
+  buildCancellationCustomerEmail,
+  buildCancellationProviderEmail,
   type BookingDetails,
+  type CancellationDetails,
 } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -12,6 +15,12 @@ export const runtime = "nodejs";
 // and TO your own account email. Set EMAIL_FROM to a verified domain to email anyone.
 const FROM = process.env.EMAIL_FROM || "LifeSwap <onboarding@resend.dev>";
 
+type Payload = BookingDetails & {
+  kind?: "booking" | "cancellation";
+  refundAmount?: number;
+  cancelledByHost?: boolean;
+};
+
 export async function POST(req: Request) {
   const apiKey = process.env.RESEND_API_KEY;
   // No key configured (e.g. local dev) → soft no-op so a booking never breaks.
@@ -19,9 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, reason: "RESEND_API_KEY not set" });
   }
 
-  let d: BookingDetails;
+  let d: Payload;
   try {
-    d = (await req.json()) as BookingDetails;
+    d = (await req.json()) as Payload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -29,27 +38,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing booking details" }, { status: 400 });
   }
 
+  const cancellation = d.kind === "cancellation";
+  const cancel: CancellationDetails = {
+    ...d,
+    refundAmount: d.refundAmount ?? 0,
+    cancelledByHost: !!d.cancelledByHost,
+  };
+  const customerEmail = cancellation
+    ? buildCancellationCustomerEmail(cancel)
+    : buildCustomerEmail(d);
+  const providerEmail = cancellation
+    ? buildCancellationProviderEmail(cancel)
+    : buildProviderEmail(d);
+
   const resend = new Resend(apiKey);
   const results: Record<string, string> = {};
 
   try {
     if (d.requesterEmail) {
-      const m = buildCustomerEmail(d);
       const r = await resend.emails.send({
         from: FROM,
         to: d.requesterEmail,
-        subject: m.subject,
-        html: m.html,
+        subject: customerEmail.subject,
+        html: customerEmail.html,
       });
       results.customer = r.error ? `error: ${r.error.message}` : "sent";
     }
     if (d.providerEmail) {
-      const m = buildProviderEmail(d);
       const r = await resend.emails.send({
         from: FROM,
         to: d.providerEmail,
-        subject: m.subject,
-        html: m.html,
+        subject: providerEmail.subject,
+        html: providerEmail.html,
       });
       results.provider = r.error ? `error: ${r.error.message}` : "sent";
     }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  CalendarDays,
+  Home,
   MessageSquare,
   User,
   Briefcase,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface DashboardSidebarProps {
   className?: string;
@@ -22,19 +23,20 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ className }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { profile } = useAuth();
+  const hasUnread = useUnreadMessages(profile?.uid);
 
   // Hosts lead with their dashboard; browsing services stays available, just lower.
   const items = profile?.isProvider
     ? [
-        { href: "/my-dashboard", label: "My Dashboard", icon: CalendarDays },
+        { href: "/home", label: "Home", icon: Home },
         { href: "/my-services", label: "My Services", icon: Briefcase },
         { href: "/messages", label: "Messages", icon: MessageSquare },
         { href: "/dashboard", label: "Browse services", icon: LayoutDashboard },
         { href: "/profile", label: "Profile & Settings", icon: User },
       ]
     : [
+        { href: "/home", label: "Home", icon: Home },
         { href: "/dashboard", label: "Browse services", icon: LayoutDashboard },
-        { href: "/my-dashboard", label: "My Dashboard", icon: CalendarDays },
         { href: "/messages", label: "Messages", icon: MessageSquare },
         { href: "/become-provider", label: "Become a Provider", icon: UserPlus },
         { href: "/profile", label: "Profile & Settings", icon: User },
@@ -57,7 +59,12 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="h-4 w-4" />
+                {item.href === "/messages" && hasUnread && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                )}
+              </span>
               <span className="flex-1">{item.label}</span>
               {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
             </Link>

@@ -14,6 +14,7 @@
  */
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getAuth, type Auth } from "firebase-admin/auth";
 
 const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true";
 
@@ -61,5 +62,23 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
     const db = adminDbInstance();
     const value = Reflect.get(db as object, prop);
     return typeof value === "function" ? value.bind(db) : value;
+  },
+});
+
+// Admin Auth — used to verify a caller's ID token on the server (e.g. cancel).
+let _adminAuth: Auth | null = null;
+function adminAuthInstance(): Auth {
+  if (!_adminAuth) {
+    const app: App = getApps()[0] ?? createApp();
+    _adminAuth = getAuth(app);
+  }
+  return _adminAuth;
+}
+
+export const adminAuth: Auth = new Proxy({} as Auth, {
+  get(_target, prop) {
+    const a = adminAuthInstance();
+    const value = Reflect.get(a as object, prop);
+    return typeof value === "function" ? value.bind(a) : value;
   },
 });

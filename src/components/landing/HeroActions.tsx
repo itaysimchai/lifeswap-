@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
 
 export function HeroActions() {
-  const { user, profile } = useAuth();
-  const home = profile?.isProvider ? "/my-dashboard" : "/dashboard";
+  const { user } = useAuth();
+  const home = "/home";
 
   return (
     <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:items-start lg:justify-start">

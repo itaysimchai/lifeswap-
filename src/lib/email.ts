@@ -137,6 +137,46 @@ export function buildProviderEmail(d: BookingDetails) {
   };
 }
 
+export interface CancellationDetails extends BookingDetails {
+  refundAmount: number;
+  cancelledByHost: boolean;
+}
+
+export function buildCancellationCustomerEmail(d: CancellationDetails) {
+  const refunded = d.refundAmount > 0 ? `$${d.refundAmount.toFixed(2)}` : null;
+  const rows: [string, string][] = [
+    ["Service", d.serviceTitle],
+    ["Provider", d.providerName],
+    ["Date", fmtDate(d.date)],
+    ["Time", d.time],
+    ["Refund", refunded ?? "—"],
+  ];
+  const intro = d.cancelledByHost
+    ? `${d.providerName} had to cancel your session.${refunded ? ` You've been fully refunded ${refunded}, on its way back to your PayPal.` : ""}`
+    : `Your session has been cancelled.${refunded ? ` A refund of ${refunded} is on its way back to your PayPal.` : ""}`;
+  return {
+    subject: `Session cancelled — ${d.serviceTitle}`,
+    html: shell("Session cancelled", intro, rows, ""),
+  };
+}
+
+export function buildCancellationProviderEmail(d: CancellationDetails) {
+  const rows: [string, string][] = [
+    ["Service", d.serviceTitle],
+    ["Booked by", d.requesterName],
+    ["Date", fmtDate(d.date)],
+    ["Time", d.time],
+  ];
+  const refunded = d.refundAmount > 0 ? `$${d.refundAmount.toFixed(2)}` : null;
+  const intro = d.cancelledByHost
+    ? `You cancelled this session. ${d.requesterName} has been fully refunded.`
+    : `${d.requesterName} cancelled this session.${refunded ? ` They were refunded ${refunded}.` : ""} The time slot is open for booking again.`;
+  return {
+    subject: `Session cancelled — ${d.serviceTitle}`,
+    html: shell("Session cancelled", intro, rows, ""),
+  };
+}
+
 /**
  * Send the customer + provider booking emails by calling the server route
  * (which holds the Resend API key). Best-effort: callers wrap this in try/catch

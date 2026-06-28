@@ -12,6 +12,8 @@
  */
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
+import { computeRefund, sessionStart } from "./cancellation";
+import { paypalRefund, paypalCaptureIdForOrder } from "./paypal";
 
 export interface ConfirmedBooking {
   serviceId: string;
@@ -27,6 +29,7 @@ export interface ConfirmedBooking {
   price: number;
   paymentMethod: "stripe" | "paypal";
   paymentRef: string; // Stripe session id / PayPal order id
+  paymentCaptureId?: string | null; // PayPal capture id, needed to refund
 }
 
 export interface BookingResult {
@@ -103,6 +106,7 @@ export async function createConfirmedBooking(
     paymentMethod: b.paymentMethod,
     paymentStatus: "paid",
     paymentRef: b.paymentRef,
+    paymentCaptureId: b.paymentCaptureId ?? null,
     status: "confirmed",
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -122,6 +126,7 @@ export async function createConfirmedBooking(
       serviceTitle: b.serviceTitle,
       lastMessage: opener,
       lastMessageAt: FieldValue.serverTimestamp(),
+      lastSenderId: b.requesterId,
       createdAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -161,4 +166,122 @@ export async function createConfirmedBooking(
   }
 
   return { bookingId: bookingRef.id, chatId };
+}
+
+/**
+ * Cancel a confirmed booking and refund per the policy in `cancellation.ts`.
+ * Server-only: issues the PayPal refund, frees the slot, and notifies the chat.
+ * `callerUid` is the verified id of whoever is cancelling.
+ */
+export async function processCancellation(
+  bookingId: string,
+  callerUid: string
+): Promise<{ refundAmount: number }> {
+  const ref = adminDb.collection("serviceRequests").doc(bookingId);
+
+  // Atomically CLAIM the cancellation (confirmed → cancelling) so two concurrent
+  // requests can't both pass the checks and double-refund.
+  const b = await adminDb.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error("Booking not found.");
+    const data = snap.data()!;
+    if (callerUid !== data.requesterId && callerUid !== data.providerId) {
+      throw new Error("You can't cancel this session.");
+    }
+    if (data.status !== "confirmed") {
+      throw new Error("This session can't be cancelled.");
+    }
+    const s = sessionStart(data.scheduledDate, data.scheduledTime);
+    if (!s || s.getTime() <= Date.now()) {
+      throw new Error("This session has already started or passed.");
+    }
+    tx.update(ref, { status: "cancelling" });
+    return data;
+  });
+
+  const start = sessionStart(b.scheduledDate, b.scheduledTime);
+  const price = Number(b.price) || 0;
+  const cancelledByHost = callerUid === b.providerId;
+  const { fraction, amount: refundAmount } = computeRefund({ price, cancelledByHost, start });
+
+  // Refund through PayPal (an external call, so it's outside the transaction).
+  // If it fails, release the claim so the booking stays valid.
+  if (refundAmount > 0 && b.paymentMethod === "paypal") {
+    try {
+      let captureId: string | undefined = b.paymentCaptureId ?? undefined;
+      if (!captureId && b.paymentRef) {
+        captureId = await paypalCaptureIdForOrder(b.paymentRef);
+      }
+      if (!captureId) throw new Error("Couldn't find the payment to refund.");
+      await paypalRefund(captureId, fraction < 1 ? refundAmount.toFixed(2) : undefined);
+    } catch (e) {
+      await ref.update({ status: "confirmed" }).catch(() => {});
+      throw e;
+    }
+  }
+
+  // Finalize cancellation.
+  await ref.update({
+    status: "cancelled",
+    cancelledBy: cancelledByHost ? "host" : "customer",
+    cancelledAt: FieldValue.serverTimestamp(),
+    refundAmount,
+  });
+
+  // Free the slot so it can be booked again.
+  if (b.scheduledDate && b.scheduledTime) {
+    const slotId = `${b.serviceId}_${b.scheduledDate}_${String(b.scheduledTime).replace(":", "")}`;
+    await adminDb.collection("bookedSlots").doc(slotId).delete().catch(() => {});
+  }
+
+  // Best-effort note in the chat.
+  try {
+    const chatId = chatIdFor(b.requesterId, b.providerId, bookingId);
+    const who = cancelledByHost ? b.providerName : b.requesterName;
+    const note =
+      refundAmount > 0
+        ? `${who} cancelled this session. Refund: $${refundAmount.toFixed(2)}.`
+        : `${who} cancelled this session.`;
+    await adminDb.collection("chats").doc(chatId).collection("messages").add({
+      senderId: callerUid,
+      text: note,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    await adminDb.collection("chats").doc(chatId).set(
+      { lastMessage: note, lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: callerUid },
+      { merge: true }
+    );
+  } catch {
+    /* best-effort — never fail the cancellation over a notification */
+  }
+
+  // Best-effort cancellation emails (route holds the Resend key).
+  try {
+    const [reqSnap, provSnap] = await Promise.all([
+      adminDb.doc(`users/${b.requesterId}`).get(),
+      adminDb.doc(`users/${b.providerId}`).get(),
+    ]);
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    await fetch(`${base}/api/send-booking-emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "cancellation",
+        serviceTitle: b.serviceTitle,
+        providerName: b.providerName,
+        providerEmail: (provSnap.data()?.email as string) ?? null,
+        requesterName: b.requesterName,
+        requesterEmail: (reqSnap.data()?.email as string) ?? null,
+        date: b.scheduledDate,
+        time: b.scheduledTime,
+        price,
+        refundAmount,
+        cancelledByHost,
+      }),
+    });
+  } catch (e) {
+    console.error("Cancellation emails could not be sent:", e);
+  }
+
+  return { refundAmount };
 }

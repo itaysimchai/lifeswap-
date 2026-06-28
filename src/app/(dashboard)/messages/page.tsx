@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useChats, useMessages } from "@/hooks/useChats";
-import { sendMessage } from "@/lib/actions";
+import { sendMessage, markChatRead } from "@/lib/actions";
 import type { Chat } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
 
@@ -71,6 +71,12 @@ export default function MessagesPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
+
+  // Mark the open conversation as read (clears its unread dot), and re-mark when
+  // new messages arrive while it's open.
+  useEffect(() => {
+    if (selectedId && uid) markChatRead(selectedId, uid).catch(() => {});
+  }, [selectedId, uid, messages.length]);
 
   async function handleSend() {
     if (!uid || !selectedId || !draft.trim() || sending) return;
