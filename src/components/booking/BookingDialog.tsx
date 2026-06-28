@@ -156,6 +156,20 @@ export function BookingDialog({
   const stripeEnabled = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const paypalEnabled = !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
+  // Only offer payment methods that are actually configured. This hides the
+  // card/Stripe option until Stripe keys are set — otherwise selecting it would
+  // fall through to the simulated (free) booking, which must never happen for a
+  // paid service in production.
+  const availableMethods = useMemo(
+    () => METHODS.filter((m) => (m.id === "stripe" ? stripeEnabled : paypalEnabled)),
+    [stripeEnabled, paypalEnabled]
+  );
+
+  // If only one method is configured (e.g. just PayPal), pre-select it.
+  useEffect(() => {
+    if (availableMethods.length === 1) setMethod(availableMethods[0].id);
+  }, [availableMethods, service?.id]);
+
   async function handlePay() {
     if (!service || !profile || !date || !time || !method) return;
     setPaying(true);
@@ -338,48 +352,60 @@ export function BookingDialog({
               )}
             </div>
 
-            {/* Payment method */}
-            <div>
-              <p className="mb-3 text-sm font-medium text-foreground">Payment method</p>
-              <div className="grid grid-cols-2 gap-3">
-                {METHODS.map((m) => {
-                  const active = method === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setMethod(m.id)}
-                      className={cn(
-                        "relative flex min-w-0 flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors",
-                        active
-                          ? "border-primary bg-primary/5 ring-1 ring-primary"
-                          : "border-border bg-card hover:border-primary/40"
-                      )}
-                    >
-                      {active && (
-                        <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
-                      )}
-                      <span
+            {/* Payment method — only configured providers are shown, so an
+                unconfigured option can't fall through to a free booking. */}
+            {availableMethods.length > 0 ? (
+              <div>
+                <p className="mb-3 text-sm font-medium text-foreground">Payment method</p>
+                <div
+                  className={cn(
+                    "grid gap-3",
+                    availableMethods.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                  )}
+                >
+                  {availableMethods.map((m) => {
+                    const active = method === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setMethod(m.id)}
                         className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-lg",
+                          "relative flex min-w-0 flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors",
                           active
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted text-muted-foreground"
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border bg-card hover:border-primary/40"
                         )}
                       >
-                        {m.icon}
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">
-                        {m.title}
-                      </span>
-                      <span className="break-words text-[11px] leading-tight text-muted-foreground">
-                        {m.subtitle}
-                      </span>
-                    </button>
-                  );
-                })}
+                        {active && (
+                          <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
+                        )}
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-lg",
+                            active
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {m.icon}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {m.title}
+                        </span>
+                        <span className="break-words text-[11px] leading-tight text-muted-foreground">
+                          {m.subtitle}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : service.price > 0 ? (
+              <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                Online payment isn&apos;t set up yet. Please check back soon.
+              </p>
+            ) : null}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
