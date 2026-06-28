@@ -45,12 +45,15 @@ service cloud.firestore {
     match /serviceRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.requesterId == uid() || resource.data.providerId == uid());
-      // No booking your own service. Payment confirms the meeting, so a booking
-      // is created directly as 'confirmed' (no separate host-approval step).
+      // No booking your own service. Browsers may create a booking ONLY for a
+      // FREE service (price 0). PAID bookings are created exclusively by the
+      // server (Admin SDK, after PayPal/Stripe verifies the charge), which
+      // bypasses these rules — so a paid booking can't be faked from a client.
       allow create: if signedIn() && notBlocked()
         && request.resource.data.requesterId == uid()
         && request.resource.data.requesterId != request.resource.data.providerId
-        && request.resource.data.status in ['confirmed', 'pending'];
+        && request.resource.data.status in ['confirmed', 'pending']
+        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price == 0;
       allow update: if signedIn()
         && (resource.data.providerId == uid() || resource.data.requesterId == uid());
     }
@@ -80,8 +83,11 @@ service cloud.firestore {
     // overwrite an existing doc — so the same slot can't be booked twice.
     match /bookedSlots/{slotId} {
       allow read: if signedIn();
+      // Same rule as bookings: browsers may claim a slot only for a FREE service;
+      // paid slots are claimed by the server (Admin SDK) after payment.
       allow create: if signedIn() && notBlocked()
-        && request.resource.data.serviceId is string;
+        && request.resource.data.serviceId is string
+        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price == 0;
       allow update: if false;
       allow delete: if isAdmin();
     }
