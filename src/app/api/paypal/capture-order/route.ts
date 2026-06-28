@@ -51,17 +51,34 @@ export async function POST(req: Request) {
     );
   }
 
-  // 1) Capture the money, then CHECK PayPal says it completed.
-  const token = await paypalAccessToken();
-  const capRes = await fetch(
-    `${paypalBase()}/v2/checkout/orders/${orderId}/capture`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    }
-  );
-  const cap = await capRes.json();
-  if (!capRes.ok || cap?.status !== "COMPLETED") {
+  // 1) Capture the money, then CHECK PayPal says it completed. Wrapped so a
+  // PayPal auth/network failure returns a clean error instead of crashing the
+  // function (no money has moved yet at this point).
+  let cap: {
+    status?: string;
+    purchase_units?: {
+      payments?: { captures?: { id?: string; amount?: { value?: string } }[] };
+    }[];
+  };
+  let capOk = false;
+  try {
+    const token = await paypalAccessToken();
+    const capRes = await fetch(
+      `${paypalBase()}/v2/checkout/orders/${orderId}/capture`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      }
+    );
+    cap = await capRes.json();
+    capOk = capRes.ok;
+  } catch {
+    return NextResponse.json(
+      { error: "Payment service is unavailable. You were not charged." },
+      { status: 502 }
+    );
+  }
+  if (!capOk || cap?.status !== "COMPLETED") {
     return NextResponse.json({ error: "Payment was not completed." }, { status: 402 });
   }
   const paid = Number(

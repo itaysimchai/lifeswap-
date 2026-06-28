@@ -46,28 +46,35 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = await paypalAccessToken();
-  const res = await fetch(`${paypalBase()}/v2/checkout/orders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: { currency_code: "USD", value: price.toFixed(2) },
-          description: (svc.title as string) ?? "LifeSwap session",
-        },
-      ],
-    }),
-  });
+  try {
+    const token = await paypalAccessToken();
+    const res = await fetch(`${paypalBase()}/v2/checkout/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: { currency_code: "USD", value: price.toFixed(2) },
+            description: (svc.title as string) ?? "LifeSwap session",
+          },
+        ],
+      }),
+    });
 
-  const order = (await res.json()) as { id?: string; message?: string };
-  if (!res.ok || !order.id) {
+    const order = (await res.json()) as { id?: string; message?: string };
+    if (!res.ok || !order.id) {
+      return NextResponse.json(
+        { error: order?.message ?? "Could not create PayPal order." },
+        { status: 502 }
+      );
+    }
+    return NextResponse.json({ id: order.id });
+  } catch (e) {
+    // PayPal auth/network failure — return a clean error instead of crashing.
     return NextResponse.json(
-      { error: order?.message ?? "Could not create PayPal order." },
+      { error: e instanceof Error ? e.message : "Payment service is unavailable." },
       { status: 502 }
     );
   }
-
-  return NextResponse.json({ id: order.id });
 }
