@@ -1,194 +1,87 @@
 # LifeSwap
 
-A production-quality marketplace for knowledge-based services — mentoring, coaching, and teaching. Built with Next.js 16, TypeScript, Prisma, and Stripe.
+LifeSwap is a Firebase-backed marketplace for booking knowledge-based sessions:
+mentoring, coaching, teaching, and expert help. It runs on Next.js and Netlify,
+uses Firebase Auth/Firestore for identity and data, and supports PayPal for paid
+bookings.
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16.2.9 (App Router) |
+|-------|------------|
+| Framework | Next.js 16.2.9 App Router |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 |
-| Components | Radix UI + CVA (shadcn/ui pattern) |
-| Database | PostgreSQL + Prisma ORM 7 |
-| Auth | Clerk |
-| Payments | Stripe |
-| State | Zustand + TanStack Query v5 |
-| Forms | React Hook Form + Zod |
-| Charts | Recharts |
-| Icons | Lucide React |
-
-## Project Structure
-
-```
-lifeswap/
-├── prisma/
-│   ├── schema.prisma        # Database schema
-│   └── seed.ts              # Seed data
-├── src/
-│   ├── app/
-│   │   ├── (public)/        # Marketplace routes (Navbar + Footer layout)
-│   │   │   ├── marketplace/ # Browse services
-│   │   │   ├── service/[id] # Service detail
-│   │   │   └── host/[id]    # Host public profile
-│   │   ├── (auth)/          # Login, register, forgot-password
-│   │   ├── (dashboard)/     # User dashboard (bookings, favorites, messages...)
-│   │   ├── (host)/          # Host dashboard (services, earnings, availability...)
-│   │   ├── (admin)/         # Admin dashboard (users, reports, analytics...)
-│   │   ├── api/             # API routes
-│   │   └── page.tsx         # Landing page (home)
-│   ├── components/
-│   │   ├── ui/              # Button, Input, Card, Badge, etc.
-│   │   └── layout/          # Navbar, Footer, Sidebars
-│   ├── lib/
-│   │   ├── prisma.ts        # Prisma client singleton
-│   │   ├── utils.ts         # Utility functions
-│   │   └── validations.ts   # Zod schemas
-│   ├── providers/           # React Query + Theme providers
-│   ├── store/               # Zustand global store
-│   ├── types/               # TypeScript types
-│   └── proxy.ts             # Route protection (Next.js 16 middleware)
-└── .env.example             # Required environment variables
-```
+| Components | Radix UI + CVA |
+| Auth | Firebase Auth |
+| Database | Cloud Firestore |
+| Server trust | Firebase Admin SDK |
+| Payments | PayPal Orders/Captures |
+| Email | Resend |
+| Deploy | Netlify + `@netlify/plugin-nextjs` |
 
 ## Setup
 
-### 1. Install dependencies
-
 ```bash
 npm install
-```
-
-### 2. Environment variables
-
-Copy `.env.example` to `.env.local` and fill in your values:
-
-```bash
 cp .env.example .env.local
-```
-
-Required variables:
-- `DATABASE_URL` — PostgreSQL connection string
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` — from clerk.com
-- `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — from stripe.com
-- `STRIPE_WEBHOOK_SECRET` — from Stripe Dashboard > Webhooks
-
-### 3. Database setup
-
-```bash
-npm run db:push       # Push schema to database
-npm run db:seed       # Seed with sample data
-```
-
-Or for production with migrations:
-
-```bash
-npm run db:migrate    # Create and apply migration
-```
-
-### 4. Run development server
-
-```bash
 npm run dev
 ```
 
-Open http://localhost:3000.
+For local Firebase testing:
 
-## User Roles
+```bash
+npm run emulators
+npm run seed
+```
 
-| Role | Description |
-|------|-------------|
-| USER | Default role. Can browse, book, message, review, and save favorites. |
-| HOST | Approved user who can create services and earn money. Apply via /host/apply. |
-| ADMIN | Full platform control. Approve/reject applications, manage users, resolve reports. |
+## Required Production Env
 
-## Pages
+Set these in Netlify:
 
-### Public (no auth required)
-- `/` — Landing page
-- `/marketplace` — Browse and search all services
-- `/service/[id]` — Service detail with booking sidebar
-- `/host/[id]` — Host public profile
+- `NEXT_PUBLIC_FIREBASE_*` web app config values
+- `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false`
+- `NEXT_PUBLIC_APP_URL=https://your-site.netlify.app`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `PAYPAL_ENV=sandbox` or `live`
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_SECRET`
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
+- `INTERNAL_API_SECRET`
 
-### Auth
-- `/login`, `/register`, `/forgot-password`
+See [DEPLOY.md](./DEPLOY.md) for the go-live walkthrough.
 
-### User Dashboard
-- `/dashboard` — Overview with upcoming bookings
-- `/bookings` — All bookings (upcoming/past/cancelled)
-- `/favorites` — Saved services
-- `/messages` — Real-time chat
-- `/notifications` — Activity feed
-- `/profile` — Account settings and host application
+## Important Flows
 
-### Host Dashboard
-- `/host/dashboard` — Revenue chart and upcoming sessions
-- `/host/services` — Manage service listings
-- `/host/services/new` — Create a new service
-- `/host/services/[id]/edit` — Edit existing service
-- `/host/earnings` — Earnings history and payouts
-- `/host/availability` — Set weekly schedule
-- `/host/settings` — Notifications, payout, and booking preferences
-- `/host/apply` — 4-step host application wizard
+- Paid booking: browser asks `/api/paypal/create-order`, PayPal confirms payment,
+  then `/api/paypal/capture-order` creates the booking server-side.
+- Free booking: browser calls `/api/bookings/free`; the server validates the user,
+  service, slot, and creates the booking.
+- Slot locking: server writes `bookedSlots` for display and `slotLocks` for
+  overlap prevention.
+- Emails: booking/cancellation emails are sent server-side through Resend.
+- Firestore rules: clients cannot create bookings, payments, slot locks, or mail.
 
-### Admin
-- `/admin` — Platform overview with live stats
-- `/admin/applications` — Review host applications
-- `/admin/users` — User management (block/unblock)
-- `/admin/hosts` — Host management (verify/remove)
-- `/admin/services` — Service moderation
-- `/admin/reports` — Review and resolve reports
-- `/admin/analytics` — Revenue, growth, and category charts
+## Scripts
 
-## API Routes
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run emulators
+npm run seed
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/auth/sync | Sync Clerk user to database |
-| GET/POST | /api/services | List/create services |
-| GET/PATCH/DELETE | /api/services/[id] | Service CRUD |
-| GET/POST | /api/bookings | List/create bookings |
-| GET/PATCH | /api/bookings/[id] | Booking detail/status |
-| GET/POST | /api/applications | Host applications |
-| PATCH | /api/admin/applications/[id] | Approve/reject application |
-| GET/PATCH | /api/admin/users/[id] | Admin user management |
-| GET/POST | /api/messages | Conversations and messages |
-| GET/POST | /api/reviews | Service reviews |
-| GET/POST | /api/favorites | Toggle favorites |
-| GET/PATCH | /api/notifications | Notifications |
-| POST | /api/reports | Submit a report |
-| GET/PUT | /api/host/availability | Availability slots |
-| PATCH | /api/host/services/[id] | Host service management |
-| POST | /api/stripe/webhook | Stripe payment events |
+## Notes
 
-## Platform Fee
+Firestore rules must be deployed before production use:
 
-The platform takes **15%** of each transaction (configurable via `STRIPE_PLATFORM_FEE_PERCENT`).
+```bash
+npx firebase deploy --only firestore:rules
+```
 
-Example: a $120 session → host receives $102, platform keeps $18.
-
-## Seed Data
-
-After running `npm run db:seed`:
-
-| Role | Email |
-|------|-------|
-| Admin | admin@lifeswap.com |
-| Host | alex.chen@example.com |
-| Host | priya.patel@example.com |
-| Host | marcus.johnson@example.com |
-| Host | aisha.hassan@example.com |
-| User | jordan.martinez@example.com |
-| User | luna.t@example.com |
-
-## Notes on Next.js 16
-
-This project uses **Next.js 16.2.9** with these breaking changes from v15:
-
-- `params` and `searchParams` in pages are now **async Promises** — always `await` them
-- Middleware file is now `src/proxy.ts` (was `middleware.ts`)
-- Turbopack enabled by default
-
-## Authentication Note
-
-`src/proxy.ts` middleware includes a placeholder session check. In production, replace it with Clerk's `auth()` helper from `@clerk/nextjs/server` to validate JWT tokens properly.
+Make your own account admin by setting `users/{uid}.role` to `admin` in Firestore.

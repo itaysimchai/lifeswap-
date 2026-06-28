@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Calendar,
   Clock,
-  CreditCard,
-  Lock,
-  Check,
   CheckCircle2,
   CalendarPlus,
   MessageSquare,
@@ -25,10 +22,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { auth } from "@/lib/firebase";
 import { useBookedSlots } from "@/hooks/useBookedSlots";
-import { bookService } from "@/lib/actions";
 import { googleCalendarLink } from "@/lib/email";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import type { PaymentMethod, Service } from "@/lib/types";
+import type { Service } from "@/lib/types";
 
 const SESSION_MINUTES = 60;
 const toMinutes = (t: string) => {
@@ -38,7 +34,6 @@ const toMinutes = (t: string) => {
 
 const DEFAULT_TIMES = ["09:00", "10:30", "13:00", "15:30"];
 
-/** Fallback availability (date -> times) when a host hasn't set any yet. */
 function fallbackAvailability(count = 6): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   const d = new Date();
@@ -72,26 +67,6 @@ function PaypalGlyph({ className }: { className?: string }) {
   );
 }
 
-const METHODS: {
-  id: PaymentMethod;
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-}[] = [
-  {
-    id: "stripe",
-    title: "Card",
-    subtitle: "Visa, Mastercard · via Stripe",
-    icon: <CreditCard className="h-5 w-5" />,
-  },
-  {
-    id: "paypal",
-    title: "PayPal",
-    subtitle: "Pay with your PayPal account",
-    icon: <PaypalGlyph className="h-5 w-5" />,
-  },
-];
-
 export function BookingDialog({
   service,
   onClose,
@@ -104,22 +79,18 @@ export function BookingDialog({
 
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
-  const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // Reset selections whenever a different service is opened.
   useEffect(() => {
     setDate(null);
     setTime(null);
-    setMethod(null);
     setError(null);
     setPaying(false);
     setDone(false);
   }, [service?.id]);
 
-  // Each date carries its own time slots.
   const availability = useMemo(() => {
     const a = service?.availability;
     return a && Object.keys(a).length ? a : fallbackAvailability();
@@ -129,14 +100,12 @@ export function BookingDialog({
     [availability]
   );
 
-  // Slots already taken (1-hour sessions), used to hide overlapping times.
   const { data: bookedSlots } = useBookedSlots(service?.id);
   const takenOnDate = useMemo(
     () => bookedSlots.filter((b) => b.date === date).map((b) => toMinutes(b.time)),
     [bookedSlots, date]
   );
 
-  // Times shown depend on the selected date, minus any that overlap a booking.
   const times = useMemo(() => {
     if (!date) return [];
     return (availability[date] ?? []).filter(
@@ -147,70 +116,40 @@ export function BookingDialog({
 
   function selectDate(d: string) {
     setDate(d);
-    setTime(null); // time is date-specific — clear any earlier pick
+    setTime(null);
   }
 
-  const canPay = !!date && !!time && !!method && !paying;
-
-  // Real Stripe is active only when a publishable key is configured. Without it
-  // the dialog keeps its original demo behaviour, so the app still works.
-  const stripeEnabled = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const paypalEnabled = !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const canBook = !!date && !!time && !paying;
 
-  // Only offer payment methods that are actually configured. This hides the
-  // card/Stripe option until Stripe keys are set — otherwise selecting it would
-  // fall through to the simulated (free) booking, which must never happen for a
-  // paid service in production.
-  const availableMethods = useMemo(
-    () => METHODS.filter((m) => (m.id === "stripe" ? stripeEnabled : paypalEnabled)),
-    [stripeEnabled, paypalEnabled]
-  );
+  async function idToken(): Promise<string> {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error("You're not signed in.");
+    return token;
+  }
 
-  // If only one method is configured (e.g. just PayPal), pre-select it.
-  useEffect(() => {
-    if (availableMethods.length === 1) setMethod(availableMethods[0].id);
-  }, [availableMethods, service?.id]);
-
-  async function handlePay() {
-    if (!service || !profile || !date || !time || !method) return;
+  async function handleFreeBooking() {
+    if (!service || !profile || !date || !time) return;
     setPaying(true);
     setError(null);
-
-    // Card via real Stripe → redirect to Stripe-hosted checkout. The booking is
-    // created server-side after Stripe confirms the charge (see PAYMENTS.md).
-    if (method === "stripe" && stripeEnabled && service.price > 0) {
-      try {
-        const res = await fetch("/api/checkout/stripe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            serviceId: service.id,
-            date,
-            time,
-            requesterId: profile.uid,
-            providerId: service.providerId,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.url) {
-          throw new Error(data.error ?? "Could not start checkout.");
-        }
-        window.location.href = data.url; // leaves the app for Stripe
-        return; // keep the spinner during navigation
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not start checkout.");
-        setPaying(false);
-        return;
-      }
-    }
-
-    // PayPal (and the demo card path) still use the simulated booking for now.
     try {
-      await bookService(profile, service, { date, time, paymentMethod: method });
-      setPaying(false);
+      const token = await idToken();
+      const res = await fetch("/api/bookings/free", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ serviceId: service.id, date, time }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Could not confirm booking.");
+      }
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
       setPaying(false);
     }
   }
@@ -228,8 +167,8 @@ export function BookingDialog({
             <DialogHeader>
               <DialogTitle>Booking confirmed</DialogTitle>
               <DialogDescription>
-                A confirmation email with these details — and an option to add it to
-                your calendar — is on its way to you and {service.providerName}.
+                A confirmation email with these details and an option to add it to
+                your calendar is on its way to you and {service.providerName}.
               </DialogDescription>
             </DialogHeader>
 
@@ -245,7 +184,7 @@ export function BookingDialog({
                 {date && time && (
                   <p className="mt-2 inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm font-medium text-foreground">
                     <Calendar className="h-4 w-4 text-primary" />
-                    {formatDate(date)} · {time}
+                    {formatDate(date)} - {time}
                   </p>
                 )}
               </div>
@@ -285,12 +224,10 @@ export function BookingDialog({
             <DialogHeader>
               <DialogTitle>Book this service</DialogTitle>
               <DialogDescription>
-                Pick a time and pay to confirm. You can message {service.providerName}{" "}
-                right after.
+                Pick a time to confirm your session with {service.providerName}.
               </DialogDescription>
             </DialogHeader>
 
-            {/* Meeting summary */}
             <div className="rounded-xl border border-border bg-background p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -315,7 +252,6 @@ export function BookingDialog({
               </div>
             </div>
 
-            {/* Dates */}
             <div>
               <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -330,7 +266,6 @@ export function BookingDialog({
               </div>
             </div>
 
-            {/* Times — specific to the chosen date */}
             <div>
               <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -353,156 +288,96 @@ export function BookingDialog({
               )}
             </div>
 
-            {/* Payment method — only configured providers are shown, so an
-                unconfigured option can't fall through to a free booking. */}
-            {availableMethods.length > 0 ? (
-              <div>
-                <p className="mb-3 text-sm font-medium text-foreground">Payment method</p>
-                <div
-                  className={cn(
-                    "grid gap-3",
-                    availableMethods.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                  )}
-                >
-                  {availableMethods.map((m) => {
-                    const active = method === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setMethod(m.id)}
-                        className={cn(
-                          "relative flex min-w-0 flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors",
-                          active
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border bg-card hover:border-primary/40"
-                        )}
-                      >
-                        {active && (
-                          <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
-                        )}
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 items-center justify-center rounded-lg",
-                            active
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {m.icon}
-                        </span>
-                        <span className="text-sm font-semibold text-foreground">
-                          {m.title}
-                        </span>
-                        <span className="break-words text-[11px] leading-tight text-muted-foreground">
-                          {m.subtitle}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : service.price > 0 ? (
-              <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-                Online payment isn&apos;t set up yet. Please check back soon.
-              </p>
-            ) : null}
-
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            {method === "paypal" && paypalEnabled && service.price > 0 ? (
-              <div className="space-y-2">
-                {(!date || !time) && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Pick a date and time above to pay with PayPal.
-                  </p>
-                )}
-                <div className={cn(!date || !time ? "pointer-events-none opacity-50" : "")}>
-                  <PayPalScriptProvider
-                    options={{
-                      clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string,
-                      currency: "USD",
-                      intent: "capture",
-                    }}
-                  >
-                    <PayPalButtons
-                      style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
-                      forceReRender={[service.id, date, time]}
-                      disabled={!date || !time || paying}
-                      createOrder={async () => {
-                        if (!profile) throw new Error("Not signed in");
-                        const res = await fetch("/api/paypal/create-order", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            serviceId: service.id,
-                            requesterId: profile.uid,
-                            providerId: service.providerId,
-                          }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok || !data.id) {
-                          throw new Error(data.error ?? "Could not start PayPal checkout.");
-                        }
-                        return data.id as string;
+            {service.price > 0 ? (
+              paypalEnabled ? (
+                <div className="space-y-2">
+                  {(!date || !time) && (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Pick a date and time above to pay with PayPal.
+                    </p>
+                  )}
+                  <div className={cn(!date || !time ? "pointer-events-none opacity-50" : "")}>
+                    <PayPalScriptProvider
+                      options={{
+                        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string,
+                        currency: "USD",
+                        intent: "capture",
                       }}
-                      onApprove={async (data) => {
-                        if (!profile || !date || !time) return;
-                        setPaying(true);
-                        setError(null);
-                        try {
-                          const idToken = await auth.currentUser?.getIdToken();
-                          const res = await fetch("/api/paypal/capture-order", {
+                    >
+                      <PayPalButtons
+                        style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
+                        forceReRender={[service.id, date, time]}
+                        disabled={!date || !time || paying}
+                        createOrder={async () => {
+                          if (!date || !time) throw new Error("Pick a date and time.");
+                          const token = await idToken();
+                          const res = await fetch("/api/paypal/create-order", {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
-                              Authorization: `Bearer ${idToken ?? ""}`,
+                              Authorization: `Bearer ${token}`,
                             },
-                            body: JSON.stringify({
-                              orderId: data.orderID,
-                              serviceId: service.id,
-                              date,
-                              time,
-                              requesterId: profile.uid,
-                              providerId: service.providerId,
-                            }),
+                            body: JSON.stringify({ serviceId: service.id, date, time }),
                           });
-                          const out = await res.json();
-                          if (!res.ok || !out.ok) {
-                            throw new Error(out.error ?? "Payment could not be confirmed.");
+                          const data = await res.json();
+                          if (!res.ok || !data.id) {
+                            throw new Error(data.error ?? "Could not start PayPal checkout.");
                           }
-                          setDone(true);
-                        } catch (e) {
-                          setError(e instanceof Error ? e.message : "Something went wrong.");
-                        } finally {
-                          setPaying(false);
-                        }
-                      }}
-                      onError={() => setError("PayPal had a problem. Please try again.")}
-                    />
-                  </PayPalScriptProvider>
+                          return data.id as string;
+                        }}
+                        onApprove={async (data) => {
+                          setPaying(true);
+                          setError(null);
+                          try {
+                            const token = await idToken();
+                            const res = await fetch("/api/paypal/capture-order", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ orderId: data.orderID }),
+                            });
+                            const out = await res.json();
+                            if (!res.ok || !out.ok) {
+                              throw new Error(out.error ?? "Payment could not be confirmed.");
+                            }
+                            setDone(true);
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : "Something went wrong.");
+                          } finally {
+                            setPaying(false);
+                          }
+                        }}
+                        onError={() => setError("PayPal had a problem. Please try again.")}
+                      />
+                    </PayPalScriptProvider>
+                  </div>
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    <PaypalGlyph className="mr-1 inline h-3.5 w-3.5" />
+                    Your booking is created only after PayPal confirms payment.
+                  </p>
                 </div>
-                <p className="text-center text-[11px] text-muted-foreground">
-                  You pay securely on PayPal. Your booking is created only after payment.
+              ) : (
+                <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                  Online payment is not set up yet. Please check back soon.
                 </p>
-              </div>
+              )
             ) : (
               <>
                 <Button
                   size="lg"
                   className="w-full"
-                  disabled={!canPay}
+                  disabled={!canBook}
                   loading={paying}
-                  onClick={handlePay}
+                  onClick={handleFreeBooking}
                 >
-                  {!paying && <Lock className="h-4 w-4" />}
-                  Pay now · {formatPrice(service.price)}
+                  Book free session
                 </Button>
-
                 <p className="-mt-1 text-center text-[11px] text-muted-foreground">
-                  {stripeEnabled && method === "stripe" && service.price > 0
-                    ? "Secure checkout via Stripe. You'll be redirected to pay."
-                    : "Demo checkout — no real charge is made. Booking is confirmed instantly."}
+                  No payment is needed for this service.
                 </p>
               </>
             )}

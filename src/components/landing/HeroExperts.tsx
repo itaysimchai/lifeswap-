@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -96,13 +96,11 @@ function DeckCard({
   index,
   open,
   reduce,
-  firstMount,
 }: {
   expert: Expert;
   index: number;
   open: boolean;
   reduce: boolean;
-  firstMount: boolean;
 }) {
   const target = open ? OPEN[index] : REST[index];
 
@@ -125,7 +123,7 @@ function DeckCard({
               type: "spring",
               stiffness: 260,
               damping: 26,
-              delay: firstMount ? (2 - index) * 0.07 : 0,
+              delay: (2 - index) * 0.07,
             }
       }
     >
@@ -137,10 +135,6 @@ function DeckCard({
 export function HeroExperts() {
   const reduce = useReducedMotion();
   const [hovered, setHovered] = useState(false);
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-  }, []);
 
   return (
     <div
@@ -155,7 +149,6 @@ export function HeroExperts() {
           index={i}
           open={hovered}
           reduce={!!reduce}
-          firstMount={!mounted.current}
         />
       ))}
     </div>

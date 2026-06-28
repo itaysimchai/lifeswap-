@@ -1,19 +1,23 @@
 /**
- * Server-side booking creation — the verified-payment version of `bookService`
- * in actions.ts. This runs ONLY on the server, ONLY after a payment has been
- * confirmed with Stripe/PayPal, and writes with the Admin SDK (which bypasses
- * security rules). It mirrors the simulated flow: claim slot, create the
- * "confirmed" booking, open the chat, send emails.
+ * Server-side booking creation. This runs only on the server, after PayPal has
+ * confirmed a paid booking or after the server has validated a free booking.
+ * It writes with the Admin SDK (which bypasses security rules): claim slot,
+ * create the "confirmed" booking, open the chat, send emails.
  *
- * It is IDEMPOTENT on `paymentRef` (the Stripe session id / PayPal order id):
+ * It is IDEMPOTENT on `paymentRef` (PayPal order id / server free-booking id):
  * calling it twice for the same payment returns the first result instead of
- * creating a second booking. That matters because two things may both try to
- * fulfil one payment — the success page AND the webhook.
+ * creating a second booking.
  */
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
 import { computeRefund, sessionStart } from "./cancellation";
 import { paypalRefund, paypalCaptureIdForOrder } from "./paypal";
+import { sendServerBookingEmail } from "./serverEmail";
+
+const SESSION_MINUTES = 60;
+const SLOT_LOCK_MINUTES = 30;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
 
 export interface ConfirmedBooking {
   serviceId: string;
@@ -27,8 +31,8 @@ export interface ConfirmedBooking {
   date: string; // "yyyy-mm-dd"
   time: string; // "HH:mm"
   price: number;
-  paymentMethod: "stripe" | "paypal";
-  paymentRef: string; // Stripe session id / PayPal order id
+  paymentMethod: "paypal" | "free";
+  paymentRef: string; // PayPal order id / server-generated free booking id
   paymentCaptureId?: string | null; // PayPal capture id, needed to refund
 }
 
@@ -43,6 +47,98 @@ function chatIdFor(a: string, b: string, requestId: string): string {
   return `${x}_${y}_${requestId}`;
 }
 
+function toMinutes(time: string): number | null {
+  if (!TIME_RE.test(time)) return null;
+  const [h, m] = time.split(":").map(Number);
+  if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  const total = h * 60 + m;
+  return total + SESSION_MINUTES <= 24 * 60 ? total : null;
+}
+
+function fromMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
+}
+
+function fallbackAvailability(count = 6): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  const d = new Date();
+  for (let i = 1; Object.keys(map).length < count; i++) {
+    const day = new Date(d);
+    day.setDate(d.getDate() + i);
+    map[day.toISOString().slice(0, 10)] = ["09:00", "10:30", "13:00", "15:30"];
+  }
+  return map;
+}
+
+function availabilityFor(
+  service: FirebaseFirestore.DocumentData,
+  date: string
+): string[] {
+  const availability = service.availability as Record<string, string[]> | undefined;
+  const map =
+    availability && Object.keys(availability).length > 0
+      ? availability
+      : fallbackAvailability();
+  const times = map[date];
+  return Array.isArray(times) ? times : [];
+}
+
+export function validateBookableSlot(
+  service: FirebaseFirestore.DocumentData,
+  date: string | undefined,
+  time: string | undefined
+): string | null {
+  if (!date || !time || !DATE_RE.test(date) || !TIME_RE.test(time)) {
+    return "Choose a valid date and time.";
+  }
+  if (service.status !== "active") {
+    return "This service is not available for booking.";
+  }
+  const minutes = toMinutes(time);
+  if (minutes === null) {
+    return "Choose a valid one-hour time slot.";
+  }
+  const start = sessionStart(date, time);
+  if (!start || start.getTime() <= Date.now()) {
+    return "Choose a future time slot.";
+  }
+  if (!availabilityFor(service, date).includes(time)) {
+    return "That time is not offered by this provider.";
+  }
+  return null;
+}
+
+function slotIdFor(serviceId: string, date: string, time: string): string {
+  return `${serviceId}_${date}_${time.replace(":", "")}`;
+}
+
+function slotLockIds(serviceId: string, date: string, time: string): string[] {
+  const start = toMinutes(time);
+  if (start === null) throw new Error("Choose a valid one-hour time slot.");
+  const ids: string[] = [];
+  for (let offset = 0; offset < SESSION_MINUTES; offset += SLOT_LOCK_MINUTES) {
+    ids.push(`${serviceId}_${date}_${fromMinutes(start + offset)}`);
+  }
+  return ids;
+}
+
+export async function assertSlotAvailable(
+  serviceId: string,
+  date: string,
+  time: string
+): Promise<void> {
+  const refs = slotLockIds(serviceId, date, time).map((id) =>
+    adminDb.collection("slotLocks").doc(id)
+  );
+  const snaps = await adminDb.getAll(...refs);
+  if (snaps.some((snap) => snap.exists)) {
+    throw new Error("That time was just booked. Please choose another slot.");
+  }
+}
+
 export async function createConfirmedBooking(
   b: ConfirmedBooking
 ): Promise<BookingResult> {
@@ -50,39 +146,81 @@ export async function createConfirmedBooking(
     throw new Error("You cannot book your own service.");
   }
 
-  // ---- Idempotency lock --------------------------------------------------
-  // `create()` fails if the doc already exists, so it acts as a one-time lock
-  // keyed on the payment. The first caller wins and does the work; any later
-  // caller (e.g. the webhook arriving after the success page already ran)
-  // lands in the catch and returns the already-stored result.
   const payRef = adminDb.collection("payments").doc(b.paymentRef);
-  try {
-    await payRef.create({
-      paymentMethod: b.paymentMethod,
-      status: "processing",
-      createdAt: FieldValue.serverTimestamp(),
-    });
-  } catch {
-    const snap = await payRef.get();
+  const existing = await adminDb.runTransaction(async (tx) => {
+    const snap = await tx.get(payRef);
+    if (!snap.exists) {
+      tx.create(payRef, {
+        paymentMethod: b.paymentMethod,
+        status: "processing",
+        amount: b.price,
+        requesterId: b.requesterId,
+        providerId: b.providerId,
+        serviceId: b.serviceId,
+        date: b.date,
+        time: b.time,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return null;
+    }
+
     const data = snap.data();
     if (data?.bookingId && data?.chatId) {
-      return { bookingId: data.bookingId, chatId: data.chatId };
+      return { bookingId: data.bookingId as string, chatId: data.chatId as string };
     }
-    // Extremely rare: the winner is mid-write. Treat as "in progress".
-    throw new Error("This payment is already being processed.");
-  }
+    if (data?.status === "processing") {
+      throw new Error("This payment is already being processed.");
+    }
+    if (data?.requesterId && data.requesterId !== b.requesterId) {
+      throw new Error("This payment belongs to another user.");
+    }
+    if (data?.serviceId && data.serviceId !== b.serviceId) {
+      throw new Error("This payment does not match the selected service.");
+    }
+    tx.set(
+      payRef,
+      {
+        paymentMethod: b.paymentMethod,
+        status: "processing",
+        amount: b.price,
+        requesterId: b.requesterId,
+        providerId: b.providerId,
+        serviceId: b.serviceId,
+        date: b.date,
+        time: b.time,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return null;
+  });
+  if (existing) return existing;
 
-  // Claim the 1-hour slot. Deterministic id => a second booking of the same
-  // slot can't be created, which prevents double-booking.
-  const slotId = `${b.serviceId}_${b.date}_${b.time.replace(":", "")}`;
+  // Claim the one-hour slot. We create one display doc plus 30-minute lock docs;
+  // overlapping starts (e.g. 10:00 and 10:30) collide on at least one lock.
+  const slotId = slotIdFor(b.serviceId, b.date, b.time);
+  const slotLocks = slotLockIds(b.serviceId, b.date, b.time);
   try {
-    await adminDb.collection("bookedSlots").doc(slotId).create({
+    const batch = adminDb.batch();
+    batch.create(adminDb.collection("bookedSlots").doc(slotId), {
       serviceId: b.serviceId,
       providerId: b.providerId,
       date: b.date,
       time: b.time,
       createdAt: FieldValue.serverTimestamp(),
     });
+    for (const id of slotLocks) {
+      batch.create(adminDb.collection("slotLocks").doc(id), {
+        serviceId: b.serviceId,
+        providerId: b.providerId,
+        date: b.date,
+        time: b.time,
+        bookingPaymentRef: b.paymentRef,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
   } catch {
     // Someone else booked this exact slot in the gap. The charge already went
     // through, so flag it for a refund rather than silently losing the money.
@@ -90,7 +228,7 @@ export async function createConfirmedBooking(
       { status: "needs_refund", reason: "slot_taken" },
       { merge: true }
     );
-    throw new Error("That time was just booked. Your payment will be refunded.");
+    throw new Error("That time was just booked. Please choose another slot.");
   }
 
   const bookingRef = await adminDb.collection("serviceRequests").add({
@@ -111,8 +249,7 @@ export async function createConfirmedBooking(
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  // Payment confirmed the meeting → open the chat immediately (same as the
-  // simulated flow in actions.ts).
+  // Payment/free validation confirmed the meeting, so open the chat immediately.
   const chatId = chatIdFor(b.requesterId, b.providerId, bookingRef.id);
   const opener = `Hi! I booked "${b.serviceTitle}" for ${b.date} at ${b.time}.`;
   await adminDb.collection("chats").doc(chatId).set(
@@ -139,27 +276,27 @@ export async function createConfirmedBooking(
 
   // Record the result so repeat calls are idempotent.
   await payRef.set(
-    { status: "done", bookingId: bookingRef.id, chatId },
+    {
+      status: "done",
+      bookingId: bookingRef.id,
+      chatId,
+      paymentCaptureId: b.paymentCaptureId ?? null,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
     { merge: true }
   );
 
-  // Confirmation emails — best-effort, never undo a paid booking over a mail
-  // hiccup. We call the existing route by absolute URL (it holds the Resend key).
+  // Confirmation emails: best-effort, never undo a booking over a mail hiccup.
   try {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    await fetch(`${base}/api/send-booking-emails`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        serviceTitle: b.serviceTitle,
-        providerName: b.providerName,
-        providerEmail: b.providerEmail,
-        requesterName: b.requesterName,
-        requesterEmail: b.requesterEmail,
-        date: b.date,
-        time: b.time,
-        price: b.price,
-      }),
+    await sendServerBookingEmail({
+      serviceTitle: b.serviceTitle,
+      providerName: b.providerName,
+      providerEmail: b.providerEmail,
+      requesterName: b.requesterName,
+      requesterEmail: b.requesterEmail,
+      date: b.date,
+      time: b.time,
+      price: b.price,
     });
   } catch (e) {
     console.error("Booking emails could not be sent:", e);
@@ -179,7 +316,7 @@ export async function processCancellation(
 ): Promise<{ refundAmount: number }> {
   const ref = adminDb.collection("serviceRequests").doc(bookingId);
 
-  // Atomically CLAIM the cancellation (confirmed → cancelling) so two concurrent
+  // Atomically CLAIM the cancellation (confirmed -> cancelling) so two concurrent
   // requests can't both pass the checks and double-refund.
   const b = await adminDb.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -230,8 +367,16 @@ export async function processCancellation(
 
   // Free the slot so it can be booked again.
   if (b.scheduledDate && b.scheduledTime) {
-    const slotId = `${b.serviceId}_${b.scheduledDate}_${String(b.scheduledTime).replace(":", "")}`;
-    await adminDb.collection("bookedSlots").doc(slotId).delete().catch(() => {});
+    const batch = adminDb.batch();
+    batch.delete(adminDb.collection("bookedSlots").doc(slotIdFor(
+      b.serviceId,
+      b.scheduledDate,
+      b.scheduledTime
+    )));
+    for (const id of slotLockIds(b.serviceId, b.scheduledDate, b.scheduledTime)) {
+      batch.delete(adminDb.collection("slotLocks").doc(id));
+    }
+    await batch.commit().catch(() => {});
   }
 
   // Best-effort note in the chat.
@@ -252,32 +397,27 @@ export async function processCancellation(
       { merge: true }
     );
   } catch {
-    /* best-effort — never fail the cancellation over a notification */
+    /* best-effort: never fail the cancellation over a notification */
   }
 
-  // Best-effort cancellation emails (route holds the Resend key).
+  // Best-effort cancellation emails.
   try {
     const [reqSnap, provSnap] = await Promise.all([
       adminDb.doc(`users/${b.requesterId}`).get(),
       adminDb.doc(`users/${b.providerId}`).get(),
     ]);
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    await fetch(`${base}/api/send-booking-emails`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "cancellation",
-        serviceTitle: b.serviceTitle,
-        providerName: b.providerName,
-        providerEmail: (provSnap.data()?.email as string) ?? null,
-        requesterName: b.requesterName,
-        requesterEmail: (reqSnap.data()?.email as string) ?? null,
-        date: b.scheduledDate,
-        time: b.scheduledTime,
-        price,
-        refundAmount,
-        cancelledByHost,
-      }),
+    await sendServerBookingEmail({
+      kind: "cancellation",
+      serviceTitle: b.serviceTitle,
+      providerName: b.providerName,
+      providerEmail: (provSnap.data()?.email as string) ?? null,
+      requesterName: b.requesterName,
+      requesterEmail: (reqSnap.data()?.email as string) ?? null,
+      date: b.scheduledDate,
+      time: b.scheduledTime,
+      price,
+      refundAmount,
+      cancelledByHost,
     });
   } catch (e) {
     console.error("Cancellation emails could not be sent:", e);

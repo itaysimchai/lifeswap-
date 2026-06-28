@@ -38,7 +38,7 @@ export interface Service {
   createdAt?: Timestamp | null;
 }
 
-export type PaymentMethod = "stripe" | "paypal";
+export type PaymentMethod = "paypal" | "free";
 
 /**
  * A booking. In the current flow there is no host approval: a paid booking is

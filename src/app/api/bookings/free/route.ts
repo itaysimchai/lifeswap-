@@ -1,21 +1,19 @@
 /**
- * POST /api/paypal/create-order  { serviceId, date, time }
- * Creates a PayPal order for a booking and returns its id. The caller, provider,
- * price, and service details are all derived server-side.
+ * POST /api/bookings/free  { serviceId, date, time }
+ * Creates a confirmed booking for a free service. This keeps free sessions on
+ * the same server-side slot-locking path as paid PayPal bookings.
  */
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
-import { paypalAccessToken, paypalBase } from "@/lib/paypal";
-import { assertSlotAvailable, validateBookableSlot } from "@/lib/serverBooking";
+import {
+  assertSlotAvailable,
+  createConfirmedBooking,
+  validateBookableSlot,
+} from "@/lib/serverBooking";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
-    return NextResponse.json({ error: "PayPal is not configured." }, { status: 500 });
-  }
-
   const authz = req.headers.get("authorization") ?? "";
   const idToken = authz.startsWith("Bearer ") ? authz.slice(7) : "";
   let callerUid: string;
@@ -61,71 +59,39 @@ export async function POST(req: Request) {
     );
   }
 
+  const price = Number(svc.price) || 0;
+  if (price > 0) {
+    return NextResponse.json({ error: "Use PayPal to book this service." }, { status: 400 });
+  }
+
   const slotError = validateBookableSlot(svc, date, time);
   if (slotError) {
     return NextResponse.json({ error: slotError }, { status: 400 });
   }
 
-  const price = Number(svc.price) || 0;
-  if (price <= 0) {
-    return NextResponse.json(
-      { error: "This service is free - no payment needed." },
-      { status: 400 }
-    );
-  }
-
   try {
     await assertSlotAvailable(serviceId, date, time);
-
-    const token = await paypalAccessToken();
-    const res = await fetch(`${paypalBase()}/v2/checkout/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        intent: "CAPTURE",
-        purchase_units: [
-          {
-            amount: { currency_code: "USD", value: price.toFixed(2) },
-            description: (svc.title as string) ?? "LifeSwap session",
-            custom_id: serviceId,
-          },
-        ],
-      }),
-    });
-
-    const order = (await res.json()) as { id?: string; message?: string };
-    if (!res.ok || !order.id) {
-      return NextResponse.json(
-        { error: order?.message ?? "Could not create PayPal order." },
-        { status: 502 }
-      );
-    }
-
     const provSnap = await adminDb.doc(`users/${providerId}`).get();
-    await adminDb.collection("payments").doc(order.id).create({
-      paymentMethod: "paypal",
-      status: "created",
-      amount: price,
-      currency: "USD",
+    const result = await createConfirmedBooking({
+      serviceId,
+      serviceTitle: (svc.title as string) ?? "Service",
       requesterId: callerUid,
       requesterName: (requester.displayName as string) ?? "",
       requesterEmail: (requester.email as string) ?? "",
       providerId,
       providerName: (provSnap.data()?.displayName as string) ?? (svc.providerName as string) ?? "Provider",
       providerEmail: (provSnap.data()?.email as string) ?? null,
-      serviceId,
-      serviceTitle: (svc.title as string) ?? "Service",
       date,
       time,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      price: 0,
+      paymentMethod: "free",
+      paymentRef: `free_${callerUid}_${serviceId}_${date}_${time.replace(":", "")}`,
     });
-
-    return NextResponse.json({ id: order.id });
+    return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Payment service is unavailable." },
-      { status: 502 }
+      { error: e instanceof Error ? e.message : "Could not confirm booking." },
+      { status: 400 }
     );
   }
 }

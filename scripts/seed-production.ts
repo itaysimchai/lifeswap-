@@ -52,6 +52,17 @@ function avail(spec: Record<number, string[]>): Record<string, string[]> {
   return m;
 }
 
+function slotLockIds(serviceId: string, date: string, time: string): string[] {
+  const [h, m] = time.split(":").map(Number);
+  const start = h * 60 + m;
+  return [0, 30].map((offset) => {
+    const total = start + offset;
+    const hh = String(Math.floor(total / 60)).padStart(2, "0");
+    const mm = String(total % 60).padStart(2, "0");
+    return `${serviceId}_${date}_${hh}${mm}`;
+  });
+}
+
 // ── People ───────────────────────────────────────────────────────────────────
 interface Person {
   uid: string;
@@ -189,8 +200,8 @@ async function makeBooking(opts: {
     providerName: provider.name,
     scheduledDate: date,
     scheduledTime: time,
-    price: svc.price,
-    paymentMethod: "stripe",
+    price: 0,
+    paymentMethod: "free",
     paymentStatus: "paid",
     status: "confirmed",
     createdAt: now,
@@ -223,6 +234,16 @@ async function makeBooking(opts: {
     time,
     createdAt: now,
   });
+  for (const lockId of slotLockIds(svc.id, date, time)) {
+    await db.doc(`slotLocks/${lockId}`).set({
+      serviceId: svc.id,
+      providerId: provider.uid,
+      date,
+      time,
+      bookingPaymentRef: `seed_${opts.id}`,
+      createdAt: now,
+    });
+  }
 }
 
 async function seedBookings() {

@@ -19,7 +19,6 @@ export const db = getFirestore(app);
 // Local dev: point the SDK at the Firebase Emulator Suite (npm run emulators).
 // Guarded so Fast Refresh / repeated imports don't reconnect.
 declare global {
-  // eslint-disable-next-line no-var
   var __fbEmulatorsConnected: boolean | undefined;
 }
 

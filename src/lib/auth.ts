@@ -70,12 +70,14 @@ export function safeRedirect(target: string | null | undefined): string {
  * to the role (member vs host). Admins reach the admin panel from the menu.
  */
 export function homePathForProfile(
-  _profile?: { isProvider?: boolean } | null
+  profile?: { isProvider?: boolean } | null
 ): string {
+  void profile;
   return "/home";
 }
 
 /** Async variant kept for callers that await it right after sign-in. */
-export async function homePathFor(_uid?: string): Promise<string> {
+export async function homePathFor(uid?: string): Promise<string> {
+  void uid;
   return "/home";
 }

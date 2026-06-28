@@ -20,7 +20,7 @@ const EXPERTS: Expert[] = [
     name: "Maya Chen",
     role: "Staff Frontend Engineer",
     field: "Engineering",
-    career: "8 years shipping production frontends, ex-Stripe",
+    career: "8 years shipping production frontends at scale",
     help: "Reviews your architecture and code so you ship cleaner, faster, and with the confidence that it'll hold up.",
     src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=320&auto=format&fit=crop",
   },

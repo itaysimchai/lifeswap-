@@ -55,6 +55,17 @@ const SEED_AVAILABILITY: Record<string, string[]> = {
   [AVAIL_DATES[3]]: ["10:00", "17:00"],
 };
 
+function slotLockIds(serviceId: string, date: string, time: string): string[] {
+  const [h, m] = time.split(":").map(Number);
+  const start = h * 60 + m;
+  return [0, 30].map((offset) => {
+    const total = start + offset;
+    const hh = String(Math.floor(total / 60)).padStart(2, "0");
+    const mm = String(total % 60).padStart(2, "0");
+    return `${serviceId}_${date}_${hh}${mm}`;
+  });
+}
+
 const USERS: SeedUser[] = [
   { uid: "u_admin", email: "admin@lifeswap.dev", displayName: "Ava Admin", password: PASSWORD, role: "admin", isProvider: false },
   { uid: "u_maya", email: "maya@lifeswap.dev", displayName: "Maya Chen", password: PASSWORD, role: "user", isProvider: true },
@@ -158,7 +169,7 @@ async function seedExtras() {
     scheduledDate: bookedDate,
     scheduledTime: bookedTime,
     price: 0,
-    paymentMethod: "stripe",
+    paymentMethod: "free",
     paymentStatus: "paid",
     status: "confirmed",
     createdAt: FieldValue.serverTimestamp(),
@@ -191,6 +202,16 @@ async function seedExtras() {
     time: bookedTime,
     createdAt: FieldValue.serverTimestamp(),
   });
+  for (const lockId of slotLockIds("s_react", bookedDate, bookedTime)) {
+    await db.doc(`slotLocks/${lockId}`).set({
+      serviceId: "s_react",
+      providerId: "u_maya",
+      date: bookedDate,
+      time: bookedTime,
+      bookingPaymentRef: "seed_req_tom_react",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  }
   console.log("  booking  Tom -> 'React & Next.js code review' (confirmed + chat + slot)");
 }
 

@@ -209,6 +209,7 @@ function MemberHome({ services, outgoing }: { services: Service[]; outgoing: Ser
 /* ─── Host home ────────────────────────────────────────────────────────────── */
 
 function HostHome({ incoming, outgoing }: { incoming: ServiceRequest[]; outgoing: ServiceRequest[] }) {
+  const [now] = useState(() => Date.now());
   const hosting = useMemo(() => upcoming(incoming), [incoming]);
   const booked = useMemo(() => upcoming(outgoing).slice(0, 3), [outgoing]);
 
@@ -217,11 +218,11 @@ function HostHome({ incoming, outgoing }: { incoming: ServiceRequest[]; outgoing
     [incoming]
   );
   const earnedThisMonth = useMemo(() => {
-    const cutoff = Date.now() - 30 * 86_400_000;
+    const cutoff = now - 30 * 86_400_000;
     return incoming
       .filter((b) => (b.createdAt?.toMillis() ?? 0) >= cutoff)
       .reduce((s, b) => s + netEarning(b), 0);
-  }, [incoming]);
+  }, [incoming, now]);
 
   return (
     <div className="space-y-12">
@@ -382,13 +383,14 @@ const PERIODS: { id: Period; label: string; days: number | null }[] = [
 
 function Earnings({ bookings }: { bookings: ServiceRequest[] }) {
   const [period, setPeriod] = useState<Period>("month");
+  const [now] = useState(() => Date.now());
   const paid = useMemo(
     () => bookings.filter((b) => b.paymentStatus === "paid"),
     [bookings]
   );
   const { total, count } = useMemo(() => {
     const def = PERIODS.find((p) => p.id === period)!;
-    const cutoff = def.days === null ? 0 : Date.now() - def.days * 86_400_000;
+    const cutoff = def.days === null ? 0 : now - def.days * 86_400_000;
     const inRange = paid.filter((b) => (b.createdAt?.toMillis() ?? 0) >= cutoff);
     let total = 0;
     let count = 0;
@@ -400,7 +402,7 @@ function Earnings({ bookings }: { bookings: ServiceRequest[] }) {
       }
     }
     return { total, count };
-  }, [paid, period]);
+  }, [paid, period, now]);
 
   return (
     <section className="space-y-4">

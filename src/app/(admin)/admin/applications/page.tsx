@@ -44,34 +44,6 @@ export default function AdminApplicationsPage() {
     }
   }
 
-  function List({ items }: { items: Application[] }) {
-    if (loading) {
-      return (
-        <div className="space-y-3">
-          {[0, 1].map((i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
-          ))}
-        </div>
-      );
-    }
-    if (items.length === 0) {
-      return (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Nothing here.
-          </CardContent>
-        </Card>
-      );
-    }
-    return (
-      <div className="space-y-3">
-        {items.map((app) => (
-          <ApplicationCard key={app.uid} app={app} busy={busy === app.uid} onReview={review} />
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -86,15 +58,53 @@ export default function AdminApplicationsPage() {
           <TabsTrigger value="rejected">Rejected ({rejected.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="mt-4">
-          <List items={pending} />
+          <ApplicationsList items={pending} loading={loading} busy={busy} onReview={review} />
         </TabsContent>
         <TabsContent value="approved" className="mt-4">
-          <List items={approved} />
+          <ApplicationsList items={approved} loading={loading} busy={busy} onReview={review} />
         </TabsContent>
         <TabsContent value="rejected" className="mt-4">
-          <List items={rejected} />
+          <ApplicationsList items={rejected} loading={loading} busy={busy} onReview={review} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ApplicationsList({
+  items,
+  loading,
+  busy,
+  onReview,
+}: {
+  items: Application[];
+  loading: boolean;
+  busy: string | null;
+  onReview: (app: Application, approve: boolean) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[0, 1].map((i) => (
+          <Skeleton key={i} className="h-40 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+          Nothing here.
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {items.map((app) => (
+        <ApplicationCard key={app.uid} app={app} busy={busy === app.uid} onReview={onReview} />
+      ))}
     </div>
   );
 }

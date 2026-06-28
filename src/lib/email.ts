@@ -1,7 +1,6 @@
 /**
  * Booking emails. The HTML templates + calendar links are built here (pure, so
- * they're reused by the server route). Delivery goes through the server route
- * `/api/send-booking-emails`, which sends via Resend using a server-only API key.
+ * they can be reused by client calendar links and server-side Resend delivery.
  */
 
 const APP_NAME = "LifeSwap";
@@ -175,17 +174,4 @@ export function buildCancellationProviderEmail(d: CancellationDetails) {
     subject: `Session cancelled — ${d.serviceTitle}`,
     html: shell("Session cancelled", intro, rows, ""),
   };
-}
-
-/**
- * Send the customer + provider booking emails by calling the server route
- * (which holds the Resend API key). Best-effort: callers wrap this in try/catch
- * so a mail hiccup never breaks a booking.
- */
-export async function sendBookingEmails(d: BookingDetails): Promise<void> {
-  await fetch("/api/send-booking-emails", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(d),
-  });
 }

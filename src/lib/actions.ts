@@ -3,35 +3,16 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   serverTimestamp,
   setDoc,
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import { sendBookingEmails } from "./email";
 import type {
-  PaymentMethod,
-  Service,
-  ServiceRequest,
   ServiceStatus,
   UserProfile,
 } from "./types";
-
-/**
- * Deterministic chat id from the two participants + the request, so accepting
- * the same request twice can't create duplicate chats. Participants are sorted
- * first so both sides compute the same id.
- */
-export function chatIdFor(
-  a: string,
-  b: string,
-  requestId: string
-): string {
-  const [x, y] = [a, b].sort();
-  return `${x}_${y}_${requestId}`;
-}
 
 // ---- Services (provider) -------------------------------------------------
 
@@ -89,155 +70,6 @@ export async function setServiceStatus(
 
 export async function deleteService(serviceId: string): Promise<void> {
   await deleteDoc(doc(db, "services", serviceId));
-}
-
-// ---- Requests ------------------------------------------------------------
-
-export interface BookingInput {
-  date: string;
-  time: string;
-  paymentMethod: PaymentMethod;
-}
-
-/**
- * Book a service. There is no host approval — a successful payment confirms the
- * meeting, creates the booking as "confirmed", and opens the chat so the two
- * sides can talk (e.g. to adjust the time).
- *
- * NOTE: the payment here is SIMULATED — no real charge is made. Wiring real
- * Stripe/PayPal needs merchant accounts, secret keys, and a server checkout +
- * webhook; that replaces only the "payment succeeds" line below.
- */
-export async function bookService(
-  requester: UserProfile,
-  service: Service,
-  input: BookingInput
-): Promise<string> {
-  if (service.providerId === requester.uid) {
-    throw new Error("You cannot book your own service.");
-  }
-
-  // --- Simulated payment success (replace with real Stripe/PayPal) ---------
-  const paymentSucceeded = true;
-  if (!paymentSucceeded) throw new Error("Payment failed.");
-
-  // Claim the slot first. The deterministic id + create-only rule means a second
-  // booking of the same slot is an update → denied, preventing double-booking.
-  const slotId = `${service.id}_${input.date}_${input.time.replace(":", "")}`;
-  try {
-    await setDoc(doc(db, "bookedSlots", slotId), {
-      serviceId: service.id,
-      providerId: service.providerId,
-      date: input.date,
-      time: input.time,
-      createdAt: serverTimestamp(),
-    });
-  } catch {
-    throw new Error("That time was just booked. Please choose another slot.");
-  }
-
-  const bookingRef = await addDoc(collection(db, "serviceRequests"), {
-    serviceId: service.id,
-    serviceTitle: service.title,
-    requesterId: requester.uid,
-    requesterName: requester.displayName,
-    providerId: service.providerId,
-    providerName: service.providerName,
-    scheduledDate: input.date,
-    scheduledTime: input.time,
-    price: service.price,
-    paymentMethod: input.paymentMethod,
-    paymentStatus: "paid",
-    status: "confirmed",
-    createdAt: serverTimestamp(),
-  });
-
-  // Payment confirmed the meeting → open the chat immediately.
-  const chatId = chatIdFor(requester.uid, service.providerId, bookingRef.id);
-  const opener = `Hi! I booked "${service.title}" for ${input.date} at ${input.time}.`;
-  await setDoc(
-    doc(db, "chats", chatId),
-    {
-      participantIds: [requester.uid, service.providerId],
-      participantNames: {
-        [requester.uid]: requester.displayName,
-        [service.providerId]: service.providerName,
-      },
-      serviceId: service.id,
-      serviceTitle: service.title,
-      lastMessage: opener,
-      lastMessageAt: serverTimestamp(),
-      lastSenderId: requester.uid,
-      createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-  await addDoc(collection(db, "chats", chatId, "messages"), {
-    senderId: requester.uid,
-    text: opener,
-    createdAt: serverTimestamp(),
-  });
-
-  // Confirmation + new-session emails (best-effort: never fail the booking).
-  try {
-    const providerSnap = await getDoc(doc(db, "users", service.providerId));
-    const providerEmail = providerSnap.exists()
-      ? ((providerSnap.data().email as string | undefined) ?? null)
-      : null;
-    await sendBookingEmails({
-      serviceTitle: service.title,
-      providerName: service.providerName,
-      providerEmail,
-      requesterName: requester.displayName,
-      requesterEmail: requester.email,
-      date: input.date,
-      time: input.time,
-      price: service.price,
-    });
-  } catch (e) {
-    console.error("Booking emails could not be queued:", e);
-  }
-
-  return chatId;
-}
-
-/**
- * Provider accepts or declines a request. Accepting also creates (idempotently)
- * the chat both parties will use. Self-chat is impossible because a request can
- * never have requesterId === providerId.
- */
-export async function respondToRequest(
-  request: ServiceRequest,
-  accept: boolean
-): Promise<string | null> {
-  await updateDoc(doc(db, "serviceRequests", request.id), {
-    status: accept ? "accepted" : "declined",
-  });
-
-  if (!accept) return null;
-
-  const chatId = chatIdFor(
-    request.requesterId,
-    request.providerId,
-    request.id
-  );
-  await setDoc(
-    doc(db, "chats", chatId),
-    {
-      participantIds: [request.requesterId, request.providerId],
-      participantNames: {
-        [request.requesterId]: request.requesterName,
-        [request.providerId]: request.providerName,
-      },
-      serviceId: request.serviceId,
-      serviceTitle: request.serviceTitle,
-      lastMessage: "",
-      lastMessageAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-  return chatId;
 }
 
 // ---- Chat ----------------------------------------------------------------
@@ -304,8 +136,7 @@ export async function submitApplication(
   profile: UserProfile,
   input: ApplicationInput
 ): Promise<void> {
-  // Note: providerStatus on the user doc is admin-controlled (security rules),
-  // so the "pending" state is read from this application doc, not the profile.
+  // providerStatus on the user doc is admin-controlled; pending lives here.
   await setDoc(doc(db, "applications", profile.uid), {
     uid: profile.uid,
     displayName: profile.displayName,

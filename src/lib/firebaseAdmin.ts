@@ -8,7 +8,7 @@
  * Two modes:
  *  - Local dev (NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true): talk to the local
  *    emulator. No service-account credentials needed — the emulator trusts
- *    anyone. This lets you test real Stripe payments without any Firebase secret.
+ *    anyone. This lets you test booking flows without any Firebase secret.
  *  - Production: authenticate with a service account (the 3 FIREBASE_* secrets
  *    from the downloaded JSON). These let the server prove it's really you.
  */

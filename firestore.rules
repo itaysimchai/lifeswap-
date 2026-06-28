@@ -11,7 +11,6 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(uid()))
         && userData(uid()).role == 'admin';
     }
-    // A blocked user cannot perform write actions (book, message, publish, apply).
     function notBlocked() {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(uid()))
@@ -20,16 +19,17 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if signedIn();
-      // A new user may create only their own doc, and cannot self-grant elevated fields.
       allow create: if signedIn() && uid() == userId
         && request.resource.data.role == 'user'
-        && request.resource.data.isProvider == false;
-      // Self-update is allowed but cannot touch role / provider fields; admins may change anything.
+        && request.resource.data.isProvider == false
+        && request.resource.data.providerStatus == 'none'
+        && request.resource.data.isBlocked == false;
       allow update: if isAdmin() || (
         signedIn() && uid() == userId
         && request.resource.data.role == resource.data.role
         && request.resource.data.isProvider == resource.data.isProvider
         && request.resource.data.providerStatus == resource.data.providerStatus
+        && request.resource.data.isBlocked == resource.data.isBlocked
       );
       allow delete: if isAdmin();
     }
@@ -38,24 +38,19 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn() && notBlocked()
         && request.resource.data.providerId == uid()
-        && userData(uid()).isProvider == true;
-      allow update, delete: if signedIn() && resource.data.providerId == uid();
+        && userData(uid()).isProvider == true
+        && request.resource.data.status in ['active', 'paused'];
+      allow update: if signedIn() && notBlocked()
+        && resource.data.providerId == uid()
+        && request.resource.data.providerId == resource.data.providerId;
+      allow delete: if signedIn() && notBlocked()
+        && resource.data.providerId == uid();
     }
 
     match /serviceRequests/{requestId} {
       allow read: if signedIn()
-        && (resource.data.requesterId == uid() || resource.data.providerId == uid());
-      // No booking your own service. Browsers may create a booking ONLY for a
-      // FREE service (price 0). PAID bookings are created exclusively by the
-      // server (Admin SDK, after PayPal/Stripe verifies the charge), which
-      // bypasses these rules — so a paid booking can't be faked from a client.
-      allow create: if signedIn() && notBlocked()
-        && request.resource.data.requesterId == uid()
-        && request.resource.data.requesterId != request.resource.data.providerId
-        && request.resource.data.status in ['confirmed', 'pending']
-        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price == 0;
-      allow update: if signedIn()
-        && (resource.data.providerId == uid() || resource.data.requesterId == uid());
+        && (isAdmin() || resource.data.requesterId == uid() || resource.data.providerId == uid());
+      allow create, update, delete: if false;
     }
 
     match /chats/{chatId} {
@@ -63,12 +58,10 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
       }
       allow read: if signedIn() && uid() in resource.data.participantIds;
-      // No self-chat: must be two distinct participants, including the creator.
-      allow create: if signedIn()
-        && uid() in request.resource.data.participantIds
-        && request.resource.data.participantIds.size() == 2
-        && request.resource.data.participantIds[0] != request.resource.data.participantIds[1];
-      allow update: if signedIn() && uid() in resource.data.participantIds;
+      allow create: if false;
+      allow update: if signedIn() && notBlocked()
+        && uid() in resource.data.participantIds
+        && request.resource.data.participantIds == resource.data.participantIds;
 
       match /messages/{messageId} {
         allow read: if signedIn() && uid() in chatParticipants();
@@ -78,30 +71,23 @@ service cloud.firestore {
       }
     }
 
-    // Claimed time slots. Public-readable (so the booking UI can hide taken
-    // slots) but each slot doc has a deterministic id, and creates can't
-    // overwrite an existing doc — so the same slot can't be booked twice.
     match /bookedSlots/{slotId} {
       allow read: if signedIn();
-      // Same rule as bookings: browsers may claim a slot only for a FREE service;
-      // paid slots are claimed by the server (Admin SDK) after payment.
-      allow create: if signedIn() && notBlocked()
-        && request.resource.data.serviceId is string
-        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price == 0;
-      allow update: if false;
-      allow delete: if isAdmin();
+      allow create, update, delete: if false;
     }
 
-    // Booking emails, consumed by the "Trigger Email" extension (Admin SDK reads
-    // and updates delivery status). NOTE: in production this enqueue should move
-    // to a Cloud Function so clients can't send arbitrary mail.
     match /mail/{mailId} {
-      allow create: if signedIn();
-      allow read, update, delete: if false;
+      allow read, create, update, delete: if false;
     }
 
-    // Abuse reports: any signed-in (non-blocked) user can file one; only admins
-    // can read and resolve them (and act, e.g. block the reported user).
+    match /payments/{paymentId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /slotLocks/{slotLockId} {
+      allow read, create, update, delete: if false;
+    }
+
     match /reports/{reportId} {
       allow read: if isAdmin();
       allow create: if signedIn() && notBlocked()
@@ -114,7 +100,6 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && uid() == userId);
       allow create: if signedIn() && notBlocked() && uid() == userId
         && request.resource.data.status == 'pending';
-      // Only admins review / change status.
       allow update, delete: if isAdmin();
     }
   }

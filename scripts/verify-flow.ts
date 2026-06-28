@@ -1,14 +1,16 @@
 /**
- * Headless end-to-end check of the core loop AGAINST the real security rules.
+ * Headless rules check against the Firebase emulators.
  * Run after `npm run emulators` + `npm run seed`:
  *
  *   npx tsx scripts/verify-flow.ts
  *
- * Uses the client SDK (subject to firestore.rules, unlike the Admin-SDK seed),
- * signing in as seeded users to prove both that the happy path works and that
- * the rules reject self-request, cross-user reads, and non-admin approvals.
+ * The current booking flow is server-owned: clients may not create bookings,
+ * payments, slot locks, booked slots, or chats directly. This script seeds one
+ * confirmed booking/chat through Admin SDK, then signs in as seeded users with
+ * the client SDK to prove participant reads/messages work and outsider/admin
+ * boundaries still hold.
  */
-import { initializeApp } from "firebase/app";
+import { initializeApp as initializeClientApp } from "firebase/app";
 import {
   connectAuthEmulator,
   getAuth,
@@ -25,35 +27,47 @@ import {
   getFirestore,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
+import { getApps, initializeApp as initializeAdminApp } from "firebase-admin/app";
+import {
+  FieldValue,
+  getFirestore as getAdminFirestore,
+} from "firebase-admin/firestore";
 
-const app = initializeApp({
-  projectId: "demo-lifeswap",
+process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
+process.env.FIREBASE_AUTH_EMULATOR_HOST ??= "127.0.0.1:9099";
+
+const PROJECT_ID = "demo-lifeswap";
+const PW = "password123";
+
+const app = initializeClientApp({
+  projectId: PROJECT_ID,
   apiKey: "demo-key",
-  authDomain: "demo-lifeswap.firebaseapp.com",
+  authDomain: `${PROJECT_ID}.firebaseapp.com`,
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
 connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
 connectFirestoreEmulator(db, "127.0.0.1", 8080);
 
-const PW = "password123";
+const adminApp = getApps()[0] ?? initializeAdminApp({ projectId: PROJECT_ID });
+const adminDb = getAdminFirestore(adminApp);
+
 let passed = 0;
 let failed = 0;
 
 function ok(name: string) {
   passed++;
-  console.log(`  ✓ ${name}`);
-}
-function bad(name: string, detail: string) {
-  failed++;
-  console.log(`  ✗ ${name}  --  ${detail}`);
+  console.log(`  PASS ${name}`);
 }
 
-/** Assert an operation succeeds. */
+function bad(name: string, detail: string) {
+  failed++;
+  console.log(`  FAIL ${name} -- ${detail}`);
+}
+
 async function expectOk(name: string, fn: () => Promise<unknown>) {
   try {
     await fn();
@@ -63,11 +77,10 @@ async function expectOk(name: string, fn: () => Promise<unknown>) {
   }
 }
 
-/** Assert an operation is rejected by the security rules. */
 async function expectDenied(name: string, fn: () => Promise<unknown>) {
   try {
     await fn();
-    bad(name, "expected permission-denied but the write/read SUCCEEDED");
+    bad(name, "expected permission-denied but the operation succeeded");
   } catch (e) {
     const code = (e as { code?: string }).code ?? "";
     if (code === "permission-denied") ok(name);
@@ -80,119 +93,125 @@ async function as(email: string) {
   await signInWithEmailAndPassword(auth, email, PW);
 }
 
-const chatIdFor = (a: string, b: string, requestId: string) => {
+const chatIdFor = (a: string, b: string, bookingId: string) => {
   const [x, y] = [a, b].sort();
-  return `${x}_${y}_${requestId}`;
+  return `${x}_${y}_${bookingId}`;
 };
 
-async function main() {
-  console.log("Verifying core loop against firestore.rules...\n");
+async function seedConfirmedBooking() {
+  const bookingId = "verify_booking";
+  const chatId = chatIdFor("u_tom", "u_maya", bookingId);
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
-  // --- Happy path: tom requests Maya's career-coaching service -------------
-  await as("tom@lifeswap.dev");
-  let reqId = "";
-  await expectOk("tom can request a service he doesn't own", async () => {
-    const ref = await addDoc(collection(db, "serviceRequests"), {
-      serviceId: "s_career",
-      serviceTitle: "Tech career & interview coaching",
-      requesterId: "u_tom",
-      requesterName: "Tom Becker",
-      providerId: "u_maya",
-      providerName: "Maya Chen",
-      message: "Keen to prep for interviews.",
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
-    reqId = ref.id;
+  await adminDb.doc(`serviceRequests/${bookingId}`).set({
+    serviceId: "s_career",
+    serviceTitle: "Tech career & interview coaching",
+    requesterId: "u_tom",
+    requesterName: "Tom Becker",
+    providerId: "u_maya",
+    providerName: "Maya Chen",
+    scheduledDate: tomorrow,
+    scheduledTime: "10:30",
+    price: 0,
+    paymentMethod: "free",
+    paymentStatus: "paid",
+    paymentRef: "verify_free_payment",
+    status: "confirmed",
+    createdAt: FieldValue.serverTimestamp(),
   });
 
-  // --- Negative: self-request must be rejected -----------------------------
-  await as("maya@lifeswap.dev");
-  await expectDenied("maya CANNOT request her own service", () =>
+  await adminDb.doc(`chats/${chatId}`).set({
+    participantIds: ["u_tom", "u_maya"],
+    participantNames: { u_tom: "Tom Becker", u_maya: "Maya Chen" },
+    serviceId: "s_career",
+    serviceTitle: "Tech career & interview coaching",
+    lastMessage: "Verified booking chat.",
+    lastMessageAt: FieldValue.serverTimestamp(),
+    lastSenderId: "u_tom",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  return { bookingId, chatId };
+}
+
+async function main() {
+  console.log("Verifying client rules against the server-owned booking flow...\n");
+  const { bookingId, chatId } = await seedConfirmedBooking();
+
+  await as("tom@lifeswap.dev");
+  await expectDenied("tom cannot create serviceRequests directly", () =>
     addDoc(collection(db, "serviceRequests"), {
       serviceId: "s_career",
-      serviceTitle: "Tech career & interview coaching",
-      requesterId: "u_maya",
-      requesterName: "Maya Chen",
+      requesterId: "u_tom",
       providerId: "u_maya",
-      providerName: "Maya Chen",
-      status: "pending",
+      status: "confirmed",
       createdAt: serverTimestamp(),
     })
   );
-
-  // --- Provider accepts -> chat is created ---------------------------------
-  await expectOk("maya sees the incoming request", async () => {
-    const snap = await getDocs(
-      query(
-        collection(db, "serviceRequests"),
-        where("providerId", "==", "u_maya")
-      )
-    );
-    if (!snap.docs.some((d) => d.id === reqId)) throw { code: "not-found" };
-  });
-
-  const chatId = chatIdFor("u_tom", "u_maya", reqId);
-  await expectOk("maya accepts the request", () =>
-    updateDoc(doc(db, "serviceRequests", reqId), { status: "accepted" })
+  await expectDenied("tom cannot create payments directly", () =>
+    addDoc(collection(db, "payments"), { requesterId: "u_tom" })
   );
-  await expectOk("maya creates the chat", () =>
-    setDoc(doc(db, "chats", chatId), {
+  await expectDenied("tom cannot create bookedSlots directly", () =>
+    addDoc(collection(db, "bookedSlots"), { serviceId: "s_career" })
+  );
+  await expectDenied("tom cannot create slotLocks directly", () =>
+    addDoc(collection(db, "slotLocks"), { serviceId: "s_career" })
+  );
+  await expectDenied("tom cannot create chats directly", () =>
+    addDoc(collection(db, "chats"), {
       participantIds: ["u_tom", "u_maya"],
-      participantNames: { u_tom: "Tom Becker", u_maya: "Maya Chen" },
-      serviceId: "s_career",
-      serviceTitle: "Tech career & interview coaching",
-      lastMessage: "",
-      lastMessageAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    })
-  );
-  await expectOk("maya sends the first message", () =>
-    addDoc(collection(db, "chats", chatId, "messages"), {
-      senderId: "u_maya",
-      text: "Hi Tom! Happy to help.",
       createdAt: serverTimestamp(),
     })
   );
 
-  // --- Tom (the other participant) can read + reply ------------------------
-  await as("tom@lifeswap.dev");
-  await expectOk("tom sees the chat in his list", async () => {
-    const snap = await getDocs(
-      query(
-        collection(db, "chats"),
-        where("participantIds", "array-contains", "u_tom")
-      )
-    );
-    if (!snap.docs.some((d) => d.id === chatId)) throw { code: "not-found" };
-  });
-  await expectOk("tom reads the message thread", async () => {
-    const snap = await getDocs(collection(db, "chats", chatId, "messages"));
-    if (snap.empty) throw { code: "not-found" };
-  });
-  await expectOk("tom replies", () =>
-    addDoc(collection(db, "chats", chatId, "messages"), {
+  await expectOk("tom can read his server-created booking", () =>
+    getDoc(doc(db, "serviceRequests", bookingId))
+  );
+  await expectOk("tom can read his server-created chat", () =>
+    getDoc(doc(db, "chats", chatId))
+  );
+  await expectOk("tom can send a message in that chat", async () => {
+    await addDoc(collection(db, "chats", chatId, "messages"), {
       senderId: "u_tom",
       text: "Thanks Maya!",
       createdAt: serverTimestamp(),
+    });
+    await updateDoc(doc(db, "chats", chatId), {
+      lastMessage: "Thanks Maya!",
+      lastMessageAt: serverTimestamp(),
+      lastSenderId: "u_tom",
+    });
+  });
+  await expectOk("tom can mark his chat read", () =>
+    updateDoc(doc(db, "chats", chatId), {
+      "lastRead.u_tom": serverTimestamp(),
     })
   );
 
-  // --- Negative: an outsider cannot read the request or chat ---------------
-  await as("leo@lifeswap.dev");
-  await expectDenied("leo (outsider) CANNOT read tom<->maya request", () =>
-    getDoc(doc(db, "serviceRequests", reqId))
-  );
-  await expectDenied("leo (outsider) CANNOT read tom<->maya chat", () =>
-    getDoc(doc(db, "chats", chatId))
+  await as("maya@lifeswap.dev");
+  await expectOk("maya sees the booking as provider", async () => {
+    const snap = await getDocs(
+      query(collection(db, "serviceRequests"), where("providerId", "==", "u_maya"))
+    );
+    if (!snap.docs.some((d) => d.id === bookingId)) throw { code: "not-found" };
+  });
+  await expectDenied("maya cannot mutate the booking directly", () =>
+    updateDoc(doc(db, "serviceRequests", bookingId), { status: "cancelled" })
   );
 
-  // --- Negative: a non-admin cannot approve an application -----------------
-  await expectDenied("leo (non-admin) CANNOT approve an application", () =>
+  await as("leo@lifeswap.dev");
+  await expectDenied("leo cannot read tom/maya booking", () =>
+    getDoc(doc(db, "serviceRequests", bookingId))
+  );
+  await expectDenied("leo cannot read tom/maya chat", () =>
+    getDoc(doc(db, "chats", chatId))
+  );
+  await expectDenied("leo cannot approve an application", () =>
     updateDoc(doc(db, "applications", "u_sara"), { status: "approved" })
   );
 
-  // --- Admin approval path (mirrors reviewApplication) ---------------------
   await as("admin@lifeswap.dev");
   await expectOk("admin approves the application", () =>
     updateDoc(doc(db, "applications", "u_sara"), {

@@ -56,131 +56,6 @@ export default function AdminReportsPage() {
     }
   }
 
-  function List({ items }: { items: Report[] }) {
-    if (loading) {
-      return (
-        <div className="space-y-3">
-          {[0, 1].map((i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
-          ))}
-        </div>
-      );
-    }
-    if (items.length === 0) {
-      return (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Nothing here.
-          </CardContent>
-        </Card>
-      );
-    }
-    return (
-      <div className="space-y-3">
-        {items.map((r) => {
-          const reported = r.reportedId ? usersById.get(r.reportedId) : undefined;
-          const canBlock =
-            !!r.reportedId &&
-            r.reportedId !== me?.uid &&
-            reported?.role !== "admin";
-          return (
-            <Card key={r.id}>
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-                    <Flag className="h-5 w-5" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-foreground">{r.subject}</h3>
-                      <Badge variant={r.status === "open" ? "warning" : "secondary"} className="text-xs">
-                        {r.status === "open" ? "Open" : "Resolved"}
-                      </Badge>
-                      {reported?.isBlocked && (
-                        <Badge variant="destructive" className="text-xs">
-                          Reported user blocked
-                        </Badge>
-                      )}
-                    </div>
-
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {r.description}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Avatar className="h-5 w-5">
-                          <AvatarFallback className="text-[9px]">
-                            {initials(r.reporterName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        Reporter: {r.reporterName}
-                      </span>
-                      {r.reportedName && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-[9px]">
-                              {initials(r.reportedName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          Reported: <span className="font-medium text-foreground">{r.reportedName}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {r.status === "open" && (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {canBlock &&
-                          (reported?.isBlocked ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={busy === r.reportedId}
-                              onClick={() => block(r.reportedId!, false)}
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Unblock {r.reportedName}
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              disabled={busy === r.reportedId}
-                              onClick={() => block(r.reportedId!, true)}
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              Block {r.reportedName}
-                            </Button>
-                          ))}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={busy === r.id}
-                          onClick={() => resolve(r.id)}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          Mark resolved
-                        </Button>
-                      </div>
-                    )}
-
-                    {r.status === "resolved" && (
-                      <p className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        Resolved
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -196,12 +71,169 @@ export default function AdminReportsPage() {
           <TabsTrigger value="resolved">Resolved ({resolved.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="open" className="mt-4">
-          <List items={open} />
+          <ReportsList
+            items={open}
+            loading={loading}
+            busy={busy}
+            usersById={usersById}
+            meUid={me?.uid}
+            onBlock={block}
+            onResolve={resolve}
+          />
         </TabsContent>
         <TabsContent value="resolved" className="mt-4">
-          <List items={resolved} />
+          <ReportsList
+            items={resolved}
+            loading={loading}
+            busy={busy}
+            usersById={usersById}
+            meUid={me?.uid}
+            onBlock={block}
+            onResolve={resolve}
+          />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ReportsList({
+  items,
+  loading,
+  busy,
+  usersById,
+  meUid,
+  onBlock,
+  onResolve,
+}: {
+  items: Report[];
+  loading: boolean;
+  busy: string | null;
+  usersById: Map<string, UserProfile>;
+  meUid?: string;
+  onBlock: (uid: string, next: boolean) => void;
+  onResolve: (reportId: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[0, 1].map((i) => (
+          <Skeleton key={i} className="h-36 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+          Nothing here.
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {items.map((r) => {
+        const reported = r.reportedId ? usersById.get(r.reportedId) : undefined;
+        const canBlock =
+          !!r.reportedId &&
+          r.reportedId !== meUid &&
+          reported?.role !== "admin";
+        return (
+          <Card key={r.id}>
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                  <Flag className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-foreground">{r.subject}</h3>
+                    <Badge variant={r.status === "open" ? "warning" : "secondary"} className="text-xs">
+                      {r.status === "open" ? "Open" : "Resolved"}
+                    </Badge>
+                    {reported?.isBlocked && (
+                      <Badge variant="destructive" className="text-xs">
+                        Reported user blocked
+                      </Badge>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {r.description}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="text-[9px]">
+                          {initials(r.reporterName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      Reporter: {r.reporterName}
+                    </span>
+                    {r.reportedName && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[9px]">
+                            {initials(r.reportedName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        Reported: <span className="font-medium text-foreground">{r.reportedName}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {r.status === "open" && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {canBlock &&
+                        (reported?.isBlocked ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busy === r.reportedId}
+                            onClick={() => onBlock(r.reportedId!, false)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Unblock {r.reportedName}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={busy === r.reportedId}
+                            onClick={() => onBlock(r.reportedId!, true)}
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            Block {r.reportedName}
+                          </Button>
+                        ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy === r.id}
+                        onClick={() => onResolve(r.id)}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Mark resolved
+                      </Button>
+                    </div>
+                  )}
+
+                  {r.status === "resolved" && (
+                    <p className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Resolved
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
