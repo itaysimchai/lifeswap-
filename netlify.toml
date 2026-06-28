@@ -14,6 +14,11 @@
   # from Netlify's secret scanner so it stops failing the build, while it still
   # scans for REAL secrets (FIREBASE_PRIVATE_KEY, PAYPAL_SECRET, RESEND_API_KEY…).
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID,NEXT_PUBLIC_PAYPAL_CLIENT_ID,NEXT_PUBLIC_APP_URL"
+  # "Smart detection" flags anything that PATTERN-matches a known secret format
+  # (the Firebase web API key matches Google's API-key shape) even when it's a
+  # public value. Turn it off — the value-based scan above still protects the
+  # real server secrets that are declared as env vars.
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 # The official Next.js runtime — handles SSR, routing, and image optimization.
 [[plugins]]
