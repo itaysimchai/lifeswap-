@@ -6,7 +6,7 @@
   "build": {
     "development": {
       "distribution": "internal",
-      "node": "20.20.1",
+      "node": "22.23.2",
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
@@ -15,7 +15,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "node": "20.20.1",
+      "node": "22.23.2",
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
@@ -24,7 +24,7 @@
     },
     "production": {
       "distribution": "internal",
-      "node": "20.20.1",
+      "node": "22.23.2",
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
