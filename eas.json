@@ -10,7 +10,8 @@
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
-        "config": "ios.yml"
+        "config": "ios.yml",
+        "image": "latest"
       }
     },
     "preview": {
@@ -19,7 +20,8 @@
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
-        "config": "ios.yml"
+        "config": "ios.yml",
+        "image": "latest"
       }
     },
     "production": {
@@ -28,7 +30,8 @@
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
-        "config": "ios.yml"
+        "config": "ios.yml",
+        "image": "latest"
       }
     }
   },
