@@ -1,0 +1,64 @@
+build:
+  name: LifeSwap iOS (Capacitor)
+  steps:
+    - eas/checkout
+
+    - eas/install_node_modules
+
+    # dist/ and ios/App/App/public/ are gitignored, so the web app
+    # is not in the uploaded archive. Build it here on the worker.
+    - run:
+        name: Build web assets and sync into Xcode project
+        command: |
+          npx vite build
+          npx cap sync ios
+
+    # Installs the distribution cert + provisioning profile into the
+    # worker keychain using the credentials EAS manages for this project.
+    - eas/configure_ios_credentials
+
+    - run:
+        name: Archive and export IPA
+        working_directory: ios/App
+        command: |
+          set -eo pipefail
+
+          PROFILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
+          UUID=$(security cms -D -i "$PROFILE" | plutil -extract UUID raw -)
+          TEAM=$(security cms -D -i "$PROFILE" | plutil -extract TeamIdentifier.0 raw -)
+          echo "Using profile $UUID (team $TEAM)"
+
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath output/App.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$TEAM" \
+            PROVISIONING_PROFILE_SPECIFIER="$UUID" \
+            archive
+
+          cat > output/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>compileBitcode</key><false/>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath output/App.xcarchive \
+            -exportOptionsPlist output/ExportOptions.plist \
+            -exportPath output
+
+    - eas/upload_artifact:
+        name: Upload IPA
+        inputs:
+          type: build-artifact
+          path: ios/App/output/*.ipa
