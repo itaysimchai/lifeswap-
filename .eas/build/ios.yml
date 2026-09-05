@@ -72,5 +72,5 @@ build:
     - eas/upload_artifact:
         name: Upload IPA
         inputs:
-          type: build-artifact
+          type: application-archive
           path: ios/App/output/*.ipa
