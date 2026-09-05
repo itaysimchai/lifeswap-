@@ -1,0 +1,16 @@
+{
+  "appId": "com.itaysimchai.lifeswap",
+  "appName": "LifeSwap",
+  "webDir": "dist",
+  "backgroundColor": "#f8fafc",
+  "loggingBehavior": "debug",
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

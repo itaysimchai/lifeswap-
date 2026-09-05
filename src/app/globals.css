@@ -1,0 +1,304 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Slate + Blue design tokens ──────────────────────────────────────────────
+   "Trust & Authority": cool light-grey (slate) neutrals + a single professional
+   blue accent. No purple/teal. Light-blue tints come from primary/5–primary/10. */
+@theme {
+  /* Brand accent */
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
+
+  /* Surfaces & neutrals (light) */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #0f172a;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #2563eb;
+
+  /* Semantic status (muted, used only on small badges/alerts) */
+  --color-success: #16a34a;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-foreground: #ffffff;
+  --color-info: #2563eb;
+  --color-info-foreground: #ffffff;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+
+  /* Signature accent — warm editorial gold. Pairs with the trust-blue to read
+     "advisory / premium" (think FT, law firms). Used sparingly: the hero
+     keyword underline and the "available now" status only. */
+  --color-signature: #a16207;
+  --color-signature-foreground: #ffffff;
+
+  /* Typography
+     Display = Fraunces, an optical old-style serif with real personality, used
+     with restraint on h1/h2 only — it carries the "learn from people who've
+     done it" editorial authority. Body/UI stays Inter. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Dark = professional deep slate (not pure black); lighter blue with dark text */
+.dark {
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #0b1220;
+
+  --color-background: #0f172a;
+  --color-foreground: #e2e8f0;
+  --color-card: #1e293b;
+  --color-card-foreground: #f1f5f9;
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f1f5f9;
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #334155;
+  --color-accent-foreground: #f1f5f9;
+  --color-border: #334155;
+  --color-input: #334155;
+  --color-ring: #3b82f6;
+
+  /* Lighter gold on the deep slate so the accent stays legible in dark mode */
+  --color-signature: #fbbf24;
+  --color-signature-foreground: #0b1220;
+}
+
+/* NOTE: do NOT add an unlayered `* { padding:0; margin:0 }` reset here — in
+   Tailwind v4 it would override every layered padding/margin utility (py-*, p-*,
+   mt-*, …) app-wide. Preflight already resets box-sizing and element margins. */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* h3–h6 are small UI headings — kept on Inter for legibility at small sizes. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Display moments only: hero + section heads wear Fraunces. opsz responds to
+   size automatically, so big headings get the true display cut. Restraint is
+   the point — the serif is the signature, so it appears in few places. */
+h1, h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.025em;
+}
+
+/* Opt-out hook for h1/h2 that are really UI chrome, not editorial display. */
+.font-ui {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Centered page container (the standard layout convention) ──────────────── */
+.container-page {
+  width: 100%;
+  max-width: 88rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 640px) {
+  .container-page { padding-inline: 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .container-page { padding-inline: 2rem; }
+}
+
+/* Subtle lift on interactive cards */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -8px rgb(15 23 42 / 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift,
+  .hover-lift:hover {
+    transition: none;
+    transform: none;
+  }
+  .animate-fadeIn {
+    animation: none;
+  }
+  .animate-marquee {
+    animation: none;
+  }
+  .reel-mask,
+  .reel-mask3d {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .reel-3d-tilt {
+    transform: none;
+  }
+  .scroll-reel-char {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .scroll-reel-exit {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Horizontal rails (experts by category) — hide the scrollbar, keep scrolling. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ─── Scroll reel (auto-scrolling marquee) ─────────────────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+/* Soft fade at both edges of the reel. */
+.reel-mask {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+
+/* 3D tilted reel (multi-row, depth) */
+.reel-3d {
+  perspective: 1300px;
+}
+.reel-3d-tilt {
+  transform: rotateX(9deg) rotateZ(-3deg);
+  transform-style: preserve-3d;
+}
+.reel-mask3d {
+  -webkit-mask-image: radial-gradient(125% 118% at 50% 48%, #000 55%, transparent);
+  mask-image: radial-gradient(125% 118% at 50% 48%, #000 55%, transparent);
+}
+
+/* ScrollReelTestimonials — character rise + block exit */
+@keyframes scroll-reel-char-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scroll-reel-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.scroll-reel-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: scroll-reel-char-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.scroll-reel-exit {
+  animation: scroll-reel-exit 240ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@font-face {font-family:LifeSwapInter;src:url(/fonts/inter.woff2) format("woff2");font-style:normal;font-weight:100 900;font-display:swap;}
+@font-face {font-family:LifeSwapFraunces;src:url(/fonts/fraunces.woff2) format("woff2");font-style:normal;font-weight:100 900;font-display:swap;}
+.lifeswap-fonts {--font-inter:LifeSwapInter,Arial,sans-serif;--font-fraunces:LifeSwapFraunces,Georgia,serif;}

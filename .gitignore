@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env*
+!.env.example
+ios/App/App/public/
+ios/App/DerivedData/
+*.xcarchive
+*.ipa
+*.p12
+*.mobileprovision
+GoogleService-Info.plist
+.DS_Store
