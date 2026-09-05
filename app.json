@@ -1,5 +1,8 @@
 {
   "expo": {
+    "name": "LifeSwap",
+    "slug": "lifeswap-ios",
+    "version": "1.0.0",
     "extra": {
       "eas": {
         "projectId": "8ee1f8e9-9d42-482a-aef0-76580401d9b7"
