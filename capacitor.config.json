@@ -6,7 +6,8 @@
   "loggingBehavior": "debug",
   "ios": {
     "contentInset": "never",
-    "preferredContentMode": "mobile"
+    "preferredContentMode": "mobile",
+    "scrollEnabled": false
   },
   "plugins": {
     "CapacitorHttp": {

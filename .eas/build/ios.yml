@@ -1,5 +1,5 @@
 build:
-  name: LifeSwap iOS (Capacitor)
+  name: LifeSwap iOS
   steps:
     - eas/checkout
 

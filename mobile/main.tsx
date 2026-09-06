@@ -42,7 +42,7 @@ function Shell(){
  const admin=(node:React.ReactNode)=><AdminLayout>{node}</AdminLayout>;
  return <div className={user?'mobile-app signed-in':'mobile-app'}>
   {!online&&<div className="offline-banner" role="status">You’re offline. Reconnect to load updates and send messages.</div>}
-  <Suspense fallback={<Loading/>}><Routes>
+  <div className="mobile-scroll"><Suspense fallback={<Loading/>}><Routes>
    <Route path="/" element={<Navigate to="/home" replace/>}/>
    <Route path="/login" element={<AuthLayout><Login/></AuthLayout>}/>
    <Route path="/register" element={<AuthLayout><Register/></AuthLayout>}/>
@@ -62,8 +62,8 @@ function Shell(){
    <Route path="/admin/reports" element={admin(<Reports/>)}/>
    <Route path="/admin/users" element={admin(<Users/>)}/>
    <Route path="*" element={<div className="mobile-loading"><h1>Page not found</h1><NavLink to="/home">Back to LifeSwap</NavLink></div>}/>
-  </Routes></Suspense>
-  {user&&<nav className="mobile-tabbar" aria-label="Main navigation">{[{to:'/home',label:'Home',Icon:Home},{to:'/dashboard',label:'Explore',Icon:Search},{to:'/messages',label:'Messages',Icon:MessageSquare},{to:'/profile',label:'Profile',Icon:UserCircle}].map(({to,label,Icon})=><NavLink key={to} to={to} className={({isActive})=>isActive?'active':''}><Icon size={22}/><span>{label}</span></NavLink>)}</nav>}
+  </Routes></Suspense></div>
+  {user&&<nav className="mobile-tabbar" aria-label="Main navigation">{[{to:'/home',label:'Home',Icon:Home},{to:'/dashboard',label:'Explore',Icon:Search},{to:'/messages',label:'Messages',Icon:MessageSquare},{to:'/profile',label:'Profile',Icon:UserCircle}].map(({to,label,Icon})=><NavLink key={to} to={to} className={({isActive})=>isActive?'active':''}><Icon size={24}/><span>{label}</span></NavLink>)}</nav>}
  </div>;
 }
 createRoot(document.getElementById('root')!).render(<ErrorBoundary><BrowserRouter><Providers><Shell/></Providers></BrowserRouter></ErrorBoundary>);
