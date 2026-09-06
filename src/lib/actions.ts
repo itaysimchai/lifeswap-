@@ -4,9 +4,12 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -177,6 +180,22 @@ export async function updateUserProfile(
   data: { displayName?: string; photoURL?: string | null }
 ): Promise<void> {
   await updateDoc(doc(db, "users", uid), data);
+}
+
+/**
+ * Removes the user's own Firestore data ahead of deleting their auth account.
+ * Must run while the user is still signed in — security rules scope these
+ * deletes to the owner. Call this BEFORE deleteUser(), never after.
+ *
+ * Content owned jointly with other people (chat messages, bookings the other
+ * party still needs) is intentionally left to a server-side cleanup job.
+ */
+export async function deleteAccountData(uid: string): Promise<void> {
+  const owned = await getDocs(
+    query(collection(db, "services"), where("providerId", "==", uid))
+  );
+  await Promise.all(owned.docs.map((d) => deleteDoc(d.ref)));
+  await deleteDoc(doc(db, "users", uid));
 }
 
 export async function setUserBlocked(

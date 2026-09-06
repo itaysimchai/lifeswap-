@@ -7,6 +7,9 @@
     "development": {
       "distribution": "internal",
       "node": "22.23.2",
+      "env": {
+        "EXPORT_METHOD": "ad-hoc"
+      },
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
@@ -17,6 +20,9 @@
     "preview": {
       "distribution": "internal",
       "node": "22.23.2",
+      "env": {
+        "EXPORT_METHOD": "ad-hoc"
+      },
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",
@@ -25,8 +31,12 @@
       }
     },
     "production": {
-      "distribution": "internal",
+      "distribution": "store",
+      "autoIncrement": true,
       "node": "22.23.2",
+      "env": {
+        "EXPORT_METHOD": "app-store"
+      },
       "ios": {
         "scheme": "App",
         "buildConfiguration": "Release",

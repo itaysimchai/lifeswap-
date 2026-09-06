@@ -27,7 +27,7 @@ function formatPrice(price: number) {
 }
 
 export default function MyServicesPage() {
-  const { profile, loading: authLoading } = useAuth();
+  const { profile, loading: authLoading, profileLoading } = useAuth();
   const { data: services, loading } = useMyServices(profile?.uid);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -63,7 +63,7 @@ export default function MyServicesPage() {
   }
 
   // Gate: only approved providers can manage services.
-  if (!authLoading && profile && !profile.isProvider) {
+  if (!authLoading && !profileLoading && profile && !profile.isProvider) {
     return (
       <div className="mx-auto max-w-md">
         <Card>
@@ -102,7 +102,7 @@ export default function MyServicesPage() {
         </Button>
       </div>
 
-      {loading ? (
+      {loading || profileLoading ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
             <Skeleton key={i} className="h-28 w-full rounded-xl" />

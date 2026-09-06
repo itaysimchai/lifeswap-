@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Save, Briefcase, ShieldCheck, LogOut } from "lucide-react";
+import { Save, Briefcase, ShieldCheck, LogOut, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/providers/AuthProvider";
-import { updateUserProfile } from "@/lib/actions";
+import { updateUserProfile, deleteAccountData } from "@/lib/actions";
 
 function initials(name: string | undefined, email: string | undefined) {
   if (name?.trim()) {
@@ -29,6 +29,61 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [password, setPassword] = useState("");
+
+  // App Store guideline 5.1.1(v): an account created in the app must be
+  // deletable from inside the app.
+  async function handleDelete() {
+    if (!user) return;
+    if (
+      !window.confirm(
+        "Permanently delete your LifeSwap account? Your profile and any services you offer will be removed. This cannot be undone."
+      )
+    )
+      return;
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const [{ deleteUser, reauthenticateWithCredential, EmailAuthProvider }, { auth }] =
+        await Promise.all([import("firebase/auth"), import("@/lib/firebase")]);
+      const current = auth.currentUser;
+      if (!current) throw new Error("You are no longer signed in.");
+
+      // Re-authenticate first. Deleting the Firestore data before we know the
+      // auth deletion can succeed would leave an account with no profile.
+      const usesPassword = current.providerData.some((pr) => pr.providerId === "password");
+      if (usesPassword) {
+        if (!password) {
+          setNeedsPassword(true);
+          setDeleting(false);
+          return;
+        }
+        const cred = EmailAuthProvider.credential(current.email ?? "", password);
+        await reauthenticateWithCredential(current, cred);
+      }
+
+      await deleteAccountData(current.uid);
+      await deleteUser(current);
+      // Auth state flips to signed-out, which routes back to /login.
+    } catch (e) {
+      const code = (e as { code?: string })?.code;
+      if (code === "auth/requires-recent-login") {
+        setDeleteError("For your security, sign out and sign in again, then retry.");
+      } else if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        setDeleteError("That password is incorrect.");
+      } else {
+        setDeleteError(
+          (e as Error)?.message ?? "Could not delete your account. Please try again."
+        );
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     if (profile) {
@@ -181,6 +236,35 @@ export default function ProfilePage() {
             <Link href={profile.isProvider ? "/my-services" : "/become-provider"}>
               {profile.isProvider ? "My services" : "Become a provider"}
             </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Danger zone */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-base text-destructive">Delete account</CardTitle>
+          <CardDescription>
+            Permanently removes your profile and any services you offer. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {needsPassword && (
+            <div className="space-y-1.5">
+              <Label htmlFor="delete-password">Confirm your password to continue</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          )}
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          <Button variant="destructive" onClick={handleDelete} loading={deleting}>
+            <Trash2 className="h-4 w-4" />
+            {needsPassword ? "Confirm delete" : "Delete my account"}
           </Button>
         </CardContent>
       </Card>
