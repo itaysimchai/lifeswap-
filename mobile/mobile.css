@@ -18,25 +18,86 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
    so resolve them against the scroller instead. */
 .mobile-scroll .min-h-screen,.mobile-scroll .min-h-dvh{min-height:100%}
 
+/* The web Navbar duplicates the bottom tabs and eats vertical space on a phone,
+   so the mobile shell replaces it with .mobile-titlebar below. Tagged rather
+   than matched on classes so it can't break when the web layout changes. */
+.mobile-app [data-web-navbar]{display:none}
+
+/* Title bar - iOS metrics: 44pt, centred 17px semibold title, side slots for a
+   back affordance and the account menu. */
+.mobile-titlebar{flex:none;position:relative;z-index:50;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
+  min-height:44px;padding:0 4px;
+  background:color-mix(in srgb,var(--color-background) 82%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.mobile-titlebar::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:var(--color-border);transform:scaleY(.5);transform-origin:bottom}
+.mobile-titlebar h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;text-align:center;
+  color:var(--color-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobile-titlebar-slot{display:flex;align-items:center;justify-content:flex-start}
+.mobile-titlebar-slot.right{justify-content:flex-end;position:relative}
+.mobile-titlebar-slot button{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;
+  background:none;border:0;padding:0;color:var(--color-primary);cursor:pointer;touch-action:manipulation}
+.mobile-titlebar-slot button:active{opacity:.5}
+
+/* Avatar tab: reset the button so it matches the NavLinks exactly. */
+.mobile-tabbar>button{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:none;border:0;cursor:pointer;font:inherit}
+.mobile-avatar-wrap{position:relative;display:block;width:26px;height:26px;border-radius:50%;overflow:hidden;
+  background:var(--color-primary);box-shadow:0 0 0 0 var(--color-primary);transition:box-shadow .18s ease}
+.mobile-tabbar>button.active .mobile-avatar-wrap{box-shadow:0 0 0 2px var(--color-primary),0 0 0 4px var(--color-card)}
+.mobile-avatar-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;line-height:1;color:var(--color-primary-foreground)}
+.mobile-avatar-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s ease}
+.mobile-avatar-img.ready{opacity:1}
+
+/* Account sheet, rising above the tab bar. */
+.mobile-sheet-root{position:fixed;inset:0;z-index:70}
+.mobile-sheet-scrim{position:absolute;inset:0;background:rgb(15 23 42 / .32);
+  animation:mobile-fade .18s ease}
+.mobile-sheet{position:absolute;left:8px;right:8px;
+  bottom:calc(8px + 60px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;padding:6px;
+  background:var(--color-card);border:1px solid var(--color-border);border-radius:16px;
+  box-shadow:0 16px 40px rgb(15 23 42 / .22);animation:mobile-rise .22s cubic-bezier(.32,1.2,.5,1)}
+.mobile-sheet button{display:block;width:100%;min-height:50px;padding:0 14px;border:0;border-radius:11px;
+  background:none;font-size:16px;font-weight:500;text-align:left;color:var(--color-foreground);cursor:pointer}
+.mobile-sheet button:active{background:var(--color-muted)}
+.mobile-sheet button.danger{color:var(--color-destructive)}
+@keyframes mobile-fade{from{opacity:0}to{opacity:1}}
+@keyframes mobile-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
 /* Tab bar - iOS metrics: ~49pt of content plus the home-indicator inset, a
    translucent material over the content, and a hairline (sub-pixel) top rule. */
 .mobile-tabbar{flex:none;position:relative;display:grid;grid-template-columns:repeat(4,1fr);
   padding:6px 8px calc(6px + env(safe-area-inset-bottom));
-  background:color-mix(in srgb,var(--card) 78%,transparent);
+  background:color-mix(in srgb,var(--color-card) 78%,transparent);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 .mobile-tabbar::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
-  background:var(--border);transform:scaleY(.5);transform-origin:top}
-.mobile-tabbar a{display:flex;min-height:44px;align-items:center;justify-content:center;flex-direction:column;
-  gap:2px;color:var(--muted-foreground);font-size:10px;font-weight:500;letter-spacing:.01em;
-  text-decoration:none;touch-action:manipulation;transition:opacity .15s ease}
-.mobile-tabbar a.active{color:var(--primary)}
-.mobile-tabbar a:active{opacity:.55}
-.mobile-tabbar a:focus-visible{outline:2px solid var(--primary);outline-offset:-2px;border-radius:10px}
+  background:var(--color-border);transform:scaleY(.5);transform-origin:top}
+.mobile-tabbar a,.mobile-tabbar>button{position:relative;display:flex;min-height:44px;align-items:center;justify-content:center;flex-direction:column;
+  gap:2px;padding-bottom:7px;color:var(--color-muted-foreground);font-size:10px;font-weight:500;letter-spacing:.01em;
+  text-decoration:none;touch-action:manipulation;
+  transition:color .18s ease,opacity .15s ease}
+/* Current page: tint plus a dot, so the active tab is obvious without relying
+   on colour alone. */
+.mobile-tabbar a.active,.mobile-tabbar>button.active{color:var(--color-primary);font-weight:600}
+/* Unread badge on the Messages tab - iOS puts the count on the icon itself. */
+.mobile-tabicon{position:relative;display:flex}
+.mobile-tabdot{position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;
+  background:var(--color-destructive);box-shadow:0 0 0 2px var(--color-card)}
+.mobile-tabbar a::after,.mobile-tabbar>button::after{content:"";position:absolute;bottom:0;left:50%;width:5px;height:5px;border-radius:50%;
+  background:currentColor;transform:translateX(-50%) scale(0);opacity:0;
+  transition:transform .2s cubic-bezier(.34,1.4,.64,1),opacity .18s ease}
+.mobile-tabbar a.active::after,.mobile-tabbar>button.active::after{transform:translateX(-50%) scale(1);opacity:1}
+@media (prefers-reduced-motion:reduce){.mobile-tabbar a,.mobile-tabbar>button,
+  .mobile-tabbar a::after,.mobile-tabbar>button::after,.mobile-sheet{transition:none;animation:none}}
+.mobile-tabbar a:active,.mobile-tabbar>button:active{opacity:.55}
+.mobile-tabbar a:focus-visible,.mobile-tabbar>button:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px;border-radius:10px}
 
 .offline-banner{flex:none;background:#78350f;color:white;padding:10px 16px;font-size:14px;z-index:60}
 
 .mobile-loading{min-height:75dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:28px;text-align:center}
-.mobile-loading h1{font-size:24px}.mobile-loading button,.mobile-loading a{color:var(--primary);padding:12px}
+.mobile-loading h1{font-size:24px}.mobile-loading button,.mobile-loading a{color:var(--color-primary);padding:12px}
 
 /* 16px keeps iOS from zooming the page when a field takes focus. */
 input,textarea,select{font-size:16px!important}
