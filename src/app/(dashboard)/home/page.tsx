@@ -64,7 +64,7 @@ function netEarning(b: ServiceRequest): number {
 }
 
 export default function HomePage() {
-  const { profile, loading: authLoading, profileLoading } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const uid = profile?.uid;
   const isProvider = !!profile?.isProvider;
 
@@ -72,10 +72,7 @@ export default function HomePage() {
   const { data: outgoing, loading: outLoading } = useOutgoingRequests(uid);
   const { data: incoming, loading: inLoading } = useIncomingRequests(uid);
 
-  // Wait for the profile too: isProvider decides which view renders, so showing
-  // the skeleton avoids flipping from the member view to the host view.
-  const loading =
-    authLoading || profileLoading || (isProvider ? inLoading : servicesLoading || outLoading);
+  const loading = authLoading || (isProvider ? inLoading : servicesLoading || outLoading);
 
   return (
     <div className="space-y-10">
