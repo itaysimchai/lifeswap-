@@ -13,7 +13,9 @@ final class LifeSwapBridgeViewController: CAPBridgeViewController {
 public class NativeTabsPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "NativeTabsPlugin"
     public let jsName = "NativeTabs"
-    public let pluginMethods = [CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise)]
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise)
+    ]
     weak var host: LifeSwapTabController?
 
     @objc func configure(_ call: CAPPluginCall) {
