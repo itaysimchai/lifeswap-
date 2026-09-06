@@ -10,3 +10,4 @@ ios/App/DerivedData/
 *.mobileprovision
 GoogleService-Info.plist
 .DS_Store
+screenshots/
