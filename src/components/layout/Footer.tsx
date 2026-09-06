@@ -24,6 +24,8 @@ export function Footer() {
             <Link href="/login" className="transition-colors hover:text-foreground">
               Sign in
             </Link>
+            <Link href="/privacy" className="transition-colors hover:text-foreground">Privacy Policy</Link>
+            <Link href="/terms" className="transition-colors hover:text-foreground">Terms of Use</Link>
           </nav>
         </div>
 

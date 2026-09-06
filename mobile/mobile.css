@@ -104,3 +104,8 @@ input,textarea,select{font-size:16px!important}
 
 [role=dialog]{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:640px){.container-page{padding-left:16px;padding-right:16px}button{touch-action:manipulation}}
+
+/* The native controller reports its actual overlap after layout/rotation.
+   Keep content underneath the glass while allowing the last row to scroll clear. */
+.native-tabs .mobile-scroll{padding-bottom:var(--native-tab-inset,0px);scroll-padding-bottom:var(--native-tab-inset,0px)}
+.native-tabs .mobile-sheet{bottom:calc(8px + env(safe-area-inset-bottom))}

@@ -178,9 +178,9 @@ export default function RegisterPage() {
             <label htmlFor="terms" className="text-sm text-muted-foreground">
               I agree to the{" "}
               <Link href="/terms" className="text-primary hover:underline">
-                Terms of Service
+                Terms of Use
               </Link>{" "}
-              and{" "}
+              and acknowledge the{" "}
               <Link href="/privacy" className="text-primary hover:underline">
                 Privacy Policy
               </Link>

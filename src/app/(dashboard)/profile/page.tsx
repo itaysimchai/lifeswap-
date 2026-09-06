@@ -240,6 +240,15 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader><CardTitle className="text-base">Legal & support</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-4 text-sm text-primary">
+          <Link href="/privacy" className="underline underline-offset-4">Privacy Policy</Link>
+          <Link href="/terms" className="underline underline-offset-4">Terms of Use</Link>
+          <a href="mailto:nadrty8@gmail.com" className="underline underline-offset-4">Contact support</a>
+        </CardContent>
+      </Card>
+
       {/* Danger zone */}
       <Card className="border-destructive/40">
         <CardHeader>

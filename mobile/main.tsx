@@ -10,6 +10,7 @@ import DashboardLayout from '@/app/(dashboard)/layout';
 import AuthLayout from '@/app/(auth)/layout';
 import AdminLayout from '@/app/(admin)/layout';
 import { installExternalLinks } from './runtime';
+import { useNativeTabs } from './native-tabs';
 import '@/app/globals.css';
 import './mobile.css';
 const Login=lazy(()=>import('@/app/(auth)/login/page'));
@@ -116,13 +117,14 @@ function Shell(){
  const {user}=useAuth();const {pathname}=useLocation();const [online,setOnline]=useState(true);
  const hasUnread=useUnreadMessages(user?.uid);
  const [accountOpen,setAccountOpen]=useState(false);
+ const nativeTabs=useNativeTabs(!!user,hasUnread,accountOpen,()=>setAccountOpen(true));
  const accountActive=ACCOUNT_ROUTES.some(r=>pathname===r||pathname.startsWith(r+'/'));
  useEffect(()=>installExternalLinks(),[]);
  useEffect(()=>{let disposed=false;let remove:(()=>void)|undefined;void Network.getStatus().then(s=>!disposed&&setOnline(s.connected));void Network.addListener('networkStatusChange',s=>setOnline(s.connected)).then(h=>{if(disposed)void h.remove();else remove=()=>void h.remove();});return()=>{disposed=true;remove?.();};},[]);
  useEffect(()=>{window.scrollTo(0,0);setAccountOpen(false);},[pathname]);
  const dashboard=(node:React.ReactNode)=><DashboardLayout>{node}</DashboardLayout>;
  const admin=(node:React.ReactNode)=><AdminLayout>{node}</AdminLayout>;
- return <div className={user?'mobile-app signed-in':'mobile-app'}>
+ return <div className={`mobile-app${user?' signed-in':''}${nativeTabs?' native-tabs':''}`}>
   {user&&<TitleBar/>}
   {!online&&<div className="offline-banner" role="status">You’re offline. Reconnect to load updates and send messages.</div>}
   <div className="mobile-scroll"><Suspense fallback={<Loading/>}><Routes>
@@ -147,7 +149,7 @@ function Shell(){
    <Route path="*" element={<div className="mobile-loading"><h1>Page not found</h1><NavLink to="/home">Back to LifeSwap</NavLink></div>}/>
   </Routes></Suspense></div>
   {user&&<AccountSheet open={accountOpen} onClose={()=>setAccountOpen(false)}/>}
-  {user&&<nav className="mobile-tabbar" aria-label="Main navigation">
+  {user&&!nativeTabs&&<nav className="mobile-tabbar" aria-label="Main navigation">
    {TABS.map(({to,label,Icon})=>
     <NavLink key={to} to={to} className={({isActive})=>isActive?'active':''}>
      <span className="mobile-tabicon">

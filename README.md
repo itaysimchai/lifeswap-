@@ -30,3 +30,26 @@ must match your registered Apple app. Signing team is intentionally unset.
 
 The included built assets are useful for inspecting the package. Always run
 `npm run ios:sync` after changing source before archiving with Xcode.
+
+### Native iOS navigation
+
+The iOS scene hosts `LifeSwapTabController` in `ios/App/App/NativeTabs.swift`.
+It uses Apple's standard `UITabBarController` appearance (Liquid Glass on iOS
+26+ with Xcode 26+), and keeps one Capacitor web view alive across tab changes.
+`mobile/native-tabs.ts` connects route selection, unread badges, and the resolved
+web theme to the native controller. The Account tab opens the existing account
+sheet. Native navigation hides during web dialogs and keyboard presentation.
+Browser/Android builds and older iOS binaries without the plugin use web tabs.
+
+This change requires a new native build, not just a web reload. Before release,
+compile with Xcode 26+ or the EAS build workflow and check on a device:
+
+- Sign in/out; switch Home, Explore, Messages, and Account without losing state.
+- Open service links and account/admin routes; confirm the selected tab follows.
+- Open Account and booking/report dialogs; confirm tabs cannot intercept touches.
+- Focus/dismiss the chat keyboard, rotate, and scroll to the last content row.
+- Check unread badges, both themes, VoiceOver, and Reduce Transparency.
+- Verify glass over scrolling content on iOS 26+ and standard tabs on older iOS.
+
+Native compilation and device appearance must be verified separately from
+`npm run check`, `npm run build`, and `npm run verify:ios`.

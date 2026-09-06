@@ -1,0 +1,100 @@
+{
+  "title": "Privacy Policy",
+  "updated": "September 6, 2026",
+  "status": "Review draft - postal address pending. The immediate-deletion policy and certain operating procedures require implementation and legal review before publication.",
+  "sections": [
+    {
+      "heading": "1. Who we are and what this covers",
+      "paragraphs": [
+        "LifeSwap is a marketplace for finding, offering, booking, and discussing services. This Privacy Policy explains personal information handling in the LifeSwap app and its connected booking service.",
+        "LifeSwap is operated by Itay Simchai in Israel and is offered internationally. Itay Simchai is the operator responsible for the personal information described in this policy. Contact: nadrty8@gmail.com. Postal address: pending.",
+        "Payment, calendar, and other external websites have their own privacy notices. This policy covers LifeSwap's handling of information, including information received from those services, rather than replacing their notices."
+      ]
+    },
+    {
+      "heading": "2. Information you provide",
+      "paragraphs": [
+        "Account and profile information: your name, email address, account identifier, optional profile image URL and the image displayed from it, account role, provider status, and account creation information. When you register with a password, Firebase Authentication processes your credentials. Passwords are not stored in the LifeSwap profile document.",
+        "Provider applications: your biography, experience, skills, optional LinkedIn and portfolio links, motivation, application status, and review dates. A profile image is currently supplied as a link, rather than a file upload.",
+        "Service listings: service title, description, category, price, availability, provider identity, optional photograph and LinkedIn link, and listing status.",
+        "Bookings and payments: the selected service, participants, date and time, session price, customer service fee, payment method and status, booking status, cancellations, refunds, and provider payment details needed to administer a transaction. Customer payments are received through Itay Simchai's PayPal account. Itay reviews transactions and arranges provider payments on the agreed session day before the session begins. The mobile app does not collect full card numbers, card security codes, or PayPal passwords in its own screens.",
+        "Conversations and support: message text, sender and participant identifiers, participant names, timestamps, latest-message previews, and conversation read timestamps. Reports include the reporter, any reported person, subject, description, and moderation status. Avoid including passwords, payment credentials, or unnecessary sensitive information in messages or reports.",
+        "Sessions can take place online or in person. If you share meeting addresses, video-call links, accessibility needs, or other arrangements in messages, that information is processed as conversation content and disclosed to the recipient. Share only what is necessary for the session. This does not mean LifeSwap automatically collects your device location."
+      ]
+    },
+    {
+      "heading": "3. Information collected through use",
+      "paragraphs": [
+        "Authentication and hosting services process connection and technical information such as IP address, browser or app information, identifiers, request times, and error or security information to deliver and protect the service. The app also checks whether a network connection is available.",
+        "Login state is stored locally on your device so that you can remain signed in. Interface preferences, such as a theme preference when set, may also be stored locally. Signing out ends your app session; uninstalling the app does not delete your account or records stored by the service.",
+        "The current mobile app does not request access to precise device location, contacts, microphone, or your photo library. Optional calendar actions open a calendar service with session details; they do not give LifeSwap access to read your calendar.",
+        "LifeSwap does not use advertising, behavioral analytics, or cross-app tracking, and does not send marketing emails. This does not prevent essential authentication, operational logging, security processing, or account and booking notices. The connected checkout and external providers may use their own cookies or similar technologies under their notices."
+      ]
+    },
+    {
+      "heading": "4. How we use information",
+      "paragraphs": [
+        "We use account information to authenticate users, maintain profiles, and administer access; application information to review provider requests; and listing, availability, and booking information to operate the marketplace and coordinate sessions.",
+        "We use payment and refund information to record transactions and handle cancellations, and conversation information to deliver messages and unread indicators. Account and booking details may be used for operational notices, including account recovery and booking-related communications.",
+        "We use reports and relevant account or activity information to investigate problems, respond to requests, enforce our Terms of Use, prevent abuse, and meet applicable legal obligations. We do not treat acceptance of the Terms as consent to unrelated marketing.",
+        "Providing account and booking information is generally voluntary, rather than a requirement imposed on you by law. However, without information necessary to create an account, process a booking, or resolve a payment, we may be unable to provide that feature. Optional profile links and images are not required to maintain a basic account."
+      ]
+    },
+    {
+      "heading": "5. Who receives information",
+      "paragraphs": [
+        "Other users can see the provider details, image, links, prices, descriptions, and availability included in a listing. Booking participants receive the information needed to identify and coordinate their session. Message recipients receive the content you send. A booking notice sent to a provider may include the customer's name and email address.",
+        "Authorized administrators use account, provider-application, and report information for administration and moderation. Messages are stored by the service; they are not represented as end-to-end encrypted. Relevant records may need to be accessed to resolve a report, security issue, or legal request.",
+        "Google Firebase supplies authentication and database services. Netlify hosts the connected LifeSwap website and booking endpoints. PayPal handles paid checkout and related payment processing. Operational email services may process recipient and booking details when notices are sent. Each provider receives information needed for its role; payment providers also process information for their own fraud prevention and legal obligations.",
+        "When your device loads a profile image from a URL, the image host receives a network request, which can reveal your IP address and technical information. Opening a provider's LinkedIn or portfolio link, or adding a session to Google Calendar or Outlook, sends you and any information included in that link to the selected service.",
+        "We may disclose relevant information where required by law or reasonably necessary to protect rights, investigate fraud, or address safety concerns. A business transfer may involve personal information, subject to applicable protections and notice requirements. Information should not be disclosed more broadly than needed for these purposes.",
+        "LifeSwap does not sell personal information or share it for targeted advertising. The operational disclosures above, including payment processing and information shared with your booking counterpart, remain necessary to provide the service."
+      ]
+    },
+    {
+      "heading": "6. Legal grounds and international processing",
+      "paragraphs": [
+        "Where the applicable law requires a legal basis, we process information as necessary to provide the account and services you request, comply with legal obligations, or pursue legitimate interests in security, support, and marketplace administration where those interests do not override your rights. We seek consent when the law requires it for an optional use, and you may withdraw that consent without affecting earlier lawful processing.",
+        "LifeSwap is operated from Israel. Google Firebase, Netlify, PayPal, and other operational providers may process information in other countries, whose privacy laws may differ from those where you live. Where required, international transfers must be covered by applicable adequacy decisions, contractual safeguards, or another lawful mechanism. Contact nadrty8@gmail.com for information about the safeguards applicable to your data. The actual hosting locations and transfer arrangements remain subject to operator verification before this draft is published."
+      ]
+    },
+    {
+      "heading": "7. Retention and account deletion",
+      "paragraphs": [
+        "You can initiate account deletion in Account > Profile & Settings > Delete account. You may need to confirm your password or sign in again. LifeSwap's intended policy is to delete ordinary account information, listings, messages, and other associated personal information immediately upon confirmed account deletion, except for information that must lawfully be retained for a specific, limited purpose.",
+        "Implementation status: the current app removes the authentication account, profile record, and service listings, but does not yet demonstrate complete deletion of messages, bookings, applications, reports, or copied identity details. Immediate deletion of all eligible records is therefore not yet an implemented guarantee. Until that process is completed, contact nadrty8@gmail.com to request deletion of remaining information.",
+        "Limited information may need to remain to satisfy legal recordkeeping obligations, resolve an existing payment, refund, chargeback or dispute, or meet a specific legal or security requirement. Retention must be limited to the records necessary for that purpose and end when the applicable requirement or matter ends. These exceptions do not justify indefinite retention of unrelated profiles or messages. LifeSwap must establish the corresponding retention and backup-deletion procedures before this policy is finalized.",
+        "Deleting an account does not itself cancel an outstanding booking or issue a refund. Resolve open bookings or contact us about them when requesting deletion. Payment providers and other participants may hold their own copies under their own obligations. Uninstalling the app does not delete server-held information."
+      ]
+    },
+    {
+      "heading": "8. Your choices and rights",
+      "paragraphs": [
+        "You can edit your display name and photo URL in Profile & Settings, manage your service listings if you are a provider, and initiate account deletion there. Email changes and requests concerning other records should be sent to nadrty8@gmail.com.",
+        "Depending on your location and applicable law, you may have rights to access or obtain a copy of your information, correct it, request deletion, restrict or object to processing, receive portable data, withdraw consent, or complain to the relevant data protection authority. These rights may have lawful exceptions.",
+        "To make a request, identify your account and the action you want. We may ask for information reasonably needed to verify your identity, but do not send your password. We will respond within the time required by applicable law and explain any lawful refusal or extension."
+      ]
+    },
+    {
+      "heading": "9. Security",
+      "paragraphs": [
+        "We use authentication and the access-control facilities of our service providers to help protect information. Security also depends on correct system configuration and responsible account use. No internet service or device is completely secure. Protect your credentials and report suspected unauthorized access through the contact above."
+      ]
+    },
+    {
+      "heading": "10. Age eligibility",
+      "paragraphs": [
+        "Customers must be at least 16 years old. People aged 16 or 17 may book online and in-person sessions but may not offer services as providers. Providers must be at least 18 years old. The service is not intended for children under 16.",
+        "LifeSwap does not impose a blanket parental-permission requirement for users aged 16 or 17. However, applicable laws governing minors, contractual capacity, data protection, and consent still apply. Where a particular activity requires a guardian's permission or another legal condition, that condition must be satisfied before the activity takes place.",
+        "If you believe someone under 16 has provided information, or you are raising a concern about a young user's information, contact nadrty8@gmail.com. We will investigate and take appropriate action, including deletion where required. We do not claim that the current app has a verified age-checking system."
+      ]
+    },
+    {
+      "heading": "11. Changes and contact",
+      "paragraphs": [
+        "We will update this policy when our practices change and identify the new effective date. Material changes will be brought to your attention where required, and new consent will be requested where necessary. A policy update does not by itself authorize an incompatible new use of previously collected information.",
+        "Privacy, support, and rights requests: nadrty8@gmail.com. Operator: Itay Simchai, Israel. Postal address: pending."
+      ]
+    }
+  ]
+}
