@@ -9,92 +9,18 @@ build:
     # uploaded archive. Build it here on the worker.
     - run:
         name: Build web assets and sync into Xcode project
-        command: |
-          npx vite build
-          npx cap sync ios
+        command: bash scripts/eas/build-web.sh
 
     # Installs the distribution cert + provisioning profile into the worker
     # keychain using the credentials EAS manages for this project.
     - eas/configure_ios_credentials
 
+    # Logic lives in a script, not inline YAML: EAS interpolates a run step's
+    # whole command string before bash runs, so embedded shell is fragile.
+    # Both scripts are syntax-checked and dry-run by `npm run verify:ios`.
     - run:
         name: Archive and export IPA
-        working_directory: ios/App
-        command: |
-          set -eo pipefail
-
-          PROFILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
-          PLIST=$(security cms -D -i "$PROFILE")
-          UUID=$(echo "$PLIST" | plutil -extract UUID raw -)
-          TEAM=$(echo "$PLIST" | plutil -extract TeamIdentifier.0 raw -)
-          NAME=$(echo "$PLIST" | plutil -extract Name raw -)
-          APPID=$(echo "$PLIST" | plutil -extract Entitlements.application-identifier raw -)
-          BUNDLE_ID=${APPID#$TEAM.}
-
-          # EXPORT_METHOD comes from the build profile's env in eas.json.
-          # ad-hoc installs on registered devices; app-store is for App Store Connect.
-          METHOD="${EXPORT_METHOD:-ad-hoc}"
-
-          # App Store Connect rejects a duplicate CFBundleVersion, so prefer the
-          # build number EAS tracks remotely over the static pbxproj value.
-          # EAS exports this on the worker; ${ eas.job.* } template syntax is NOT
-          # interpolated inside a run step and leaks through literally.
-          ROOT="${EAS_BUILD_WORKINGDIR:-$(cd ../.. && pwd)}"
-          APP_VERSION=$(node -p "require('$ROOT/app.json').expo.version" 2>/dev/null || true)
-
-          # An array, so a value can never word-split into a stray xcodebuild action.
-          VERSION_ARGS=()
-          if [ -n "${EAS_BUILD_IOS_BUILD_NUMBER:-}" ]; then
-            VERSION_ARGS+=("CURRENT_PROJECT_VERSION=$EAS_BUILD_IOS_BUILD_NUMBER")
-          fi
-          if [ -n "$APP_VERSION" ]; then
-            VERSION_ARGS+=("MARKETING_VERSION=$APP_VERSION")
-          fi
-
-          echo "profile=$NAME uuid=$UUID team=$TEAM bundle=$BUNDLE_ID"
-          echo "method=$METHOD version=${APP_VERSION:-<pbxproj>} build=${EAS_BUILD_IOS_BUILD_NUMBER:-<pbxproj>}"
-
-          xcodebuild \
-            -project App.xcodeproj \
-            -scheme App \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath output/App.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="$TEAM" \
-            PROVISIONING_PROFILE_SPECIFIER="$UUID" \
-            "${VERSION_ARGS[@]}" \
-            archive
-
-          cat > output/ExportOptions.plist <<PLISTEOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>$METHOD</string>
-            <key>teamID</key><string>$TEAM</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>compileBitcode</key><false/>
-            <key>stripSwiftSymbols</key><true/>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>$BUNDLE_ID</key><string>$UUID</string>
-            </dict>
-          </dict>
-          </plist>
-          PLISTEOF
-
-          xcodebuild -exportArchive \
-            -archivePath output/App.xcarchive \
-            -exportOptionsPlist output/ExportOptions.plist \
-            -exportPath output
-
-          echo "=== export output ==="
-          ls -la output/
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-            output/App.xcarchive/Products/Applications/App.app/Info.plist
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' \
-            output/App.xcarchive/Products/Applications/App.app/Info.plist
+        command: bash scripts/eas/archive-ios.sh
 
     - eas/upload_artifact:
         name: Upload IPA
