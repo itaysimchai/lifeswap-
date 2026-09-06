@@ -20,9 +20,6 @@ build:
     - run:
         name: Archive and export IPA
         working_directory: ios/App
-        env:
-          EAS_BUILD_NUMBER: ${ eas.job.version.buildNumber }
-          EAS_APP_VERSION: ${ eas.job.version.appVersion }
         command: |
           set -eo pipefail
 
@@ -40,16 +37,22 @@ build:
 
           # App Store Connect rejects a duplicate CFBundleVersion, so prefer the
           # build number EAS tracks remotely over the static pbxproj value.
-          VERSION_ARGS=""
-          if [ -n "${EAS_BUILD_NUMBER:-}" ]; then
-            VERSION_ARGS="$VERSION_ARGS CURRENT_PROJECT_VERSION=$EAS_BUILD_NUMBER"
+          # EAS exports this on the worker; ${ eas.job.* } template syntax is NOT
+          # interpolated inside a run step and leaks through literally.
+          ROOT="${EAS_BUILD_WORKINGDIR:-$(cd ../.. && pwd)}"
+          APP_VERSION=$(node -p "require('$ROOT/app.json').expo.version" 2>/dev/null || true)
+
+          # An array, so a value can never word-split into a stray xcodebuild action.
+          VERSION_ARGS=()
+          if [ -n "${EAS_BUILD_IOS_BUILD_NUMBER:-}" ]; then
+            VERSION_ARGS+=("CURRENT_PROJECT_VERSION=$EAS_BUILD_IOS_BUILD_NUMBER")
           fi
-          if [ -n "${EAS_APP_VERSION:-}" ]; then
-            VERSION_ARGS="$VERSION_ARGS MARKETING_VERSION=$EAS_APP_VERSION"
+          if [ -n "$APP_VERSION" ]; then
+            VERSION_ARGS+=("MARKETING_VERSION=$APP_VERSION")
           fi
 
           echo "profile=$NAME uuid=$UUID team=$TEAM bundle=$BUNDLE_ID"
-          echo "method=$METHOD version=${EAS_APP_VERSION:-<pbxproj>} build=${EAS_BUILD_NUMBER:-<pbxproj>}"
+          echo "method=$METHOD version=${APP_VERSION:-<pbxproj>} build=${EAS_BUILD_IOS_BUILD_NUMBER:-<pbxproj>}"
 
           xcodebuild \
             -project App.xcodeproj \
@@ -60,7 +63,7 @@ build:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$TEAM" \
             PROVISIONING_PROFILE_SPECIFIER="$UUID" \
-            $VERSION_ARGS \
+            "${VERSION_ARGS[@]}" \
             archive
 
           cat > output/ExportOptions.plist <<PLISTEOF
