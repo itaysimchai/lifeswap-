@@ -1,6 +1,12 @@
 import { publicConfig } from "./public-config";
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import {
+  initializeAuth,
+  getAuth,
+  browserLocalPersistence,
+  connectAuthEmulator,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -14,7 +20,21 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// getAuth() installs a popup/redirect resolver that loads an iframe from
+// authDomain while initialising. That request never completes here, so
+// onAuthStateChanged never fires and every screen sits on its loading spinner.
+// Nothing in the app uses popup/redirect sign-in, so initialise without a
+// resolver. If popup sign-in is ever added, pass popupRedirectResolver here.
+function createAuth(): Auth {
+  try {
+    return initializeAuth(app, { persistence: browserLocalPersistence });
+  } catch {
+    // Already initialised - e.g. this module re-evaluated by Fast Refresh.
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
 export const db = getFirestore(app);
 
 // Local dev: point the SDK at the Firebase Emulator Suite (npm run emulators).
