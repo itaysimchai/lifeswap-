@@ -34,7 +34,7 @@ export const serviceSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(100),
   description: z.string().min(30, "Description must be at least 30 characters").max(2000),
   // `category` is validated manually in the form (it's a Select kept in separate
-  // state, not a registered RHF field) — keeping it here would silently block submit.
+  // state, not a registered RHF field) - keeping it here would silently block submit.
   price: z.number().min(0, "Price can't be negative").max(10000, "Maximum price is $10,000"),
   linkedin: z.string().url("Enter a valid URL").optional().or(z.literal("")),
 });

@@ -75,8 +75,8 @@ export default function HomePage() {
   const loading = authLoading || (isProvider ? inLoading : servicesLoading || outLoading);
 
   return (
-    <div className="space-y-10">
-      <header>
+    <div className="space-y-6">
+      <header data-page-header>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           {greeting()}, {firstName(profile?.displayName)}
         </h1>
@@ -119,11 +119,11 @@ function MemberHome({ services, outgoing }: { services: Service[]; outgoing: Ser
   const mine = useMemo(() => upcoming(outgoing).slice(0, 3), [outgoing]);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* Featured sessions */}
       <section className="space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Featured sessions</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">Featured sessions</h2>
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
@@ -133,13 +133,13 @@ function MemberHome({ services, outgoing }: { services: Service[]; outgoing: Ser
         </div>
 
         {/* Category chips */}
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div data-fullbleed className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">
           {categories.map((c) => (
             <button
               key={c}
               onClick={() => setCat(c)}
               className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors active:opacity-60",
                 cat === c
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -158,7 +158,7 @@ function MemberHome({ services, outgoing }: { services: Service[]; outgoing: Ser
             </Link>
           </EmptyState>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mobile-rail grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {featured.map((s) => (
               <SessionCard key={s.id} service={s} />
             ))}
@@ -169,7 +169,7 @@ function MemberHome({ services, outgoing }: { services: Service[]; outgoing: Ser
       {/* Quick dashboard */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-foreground">Your sessions</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">Your sessions</h2>
           <Link
             href="/messages"
             className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
@@ -225,9 +225,9 @@ function HostHome({ incoming, outgoing }: { incoming: ServiceRequest[]; outgoing
   }, [incoming, now]);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* Snapshot */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={Wallet} label="Earned this month" value={money(earnedThisMonth)} accent />
         <StatCard icon={CalendarCheck} label="Upcoming" value={String(hosting.length)} />
         <StatCard icon={TrendingUp} label="Sessions hosted" value={String(totalHosted)} />
@@ -237,7 +237,7 @@ function HostHome({ incoming, outgoing }: { incoming: ServiceRequest[]; outgoing
       {/* Next sessions you're hosting */}
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Next sessions you&apos;re hosting</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">Next sessions you&apos;re hosting</h2>
           <Button asChild size="sm">
             <Link href="/my-services">
               <Plus className="h-4 w-4" /> Add a session
@@ -269,7 +269,7 @@ function HostHome({ incoming, outgoing }: { incoming: ServiceRequest[]; outgoing
       {/* Sessions you booked (secondary) */}
       {booked.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">Sessions you booked</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">Sessions you booked</h2>
           <div className="space-y-3">
             {booked.map((b) => (
               <BookingRow key={b.id} booking={b} perspective="customer" />
@@ -406,7 +406,7 @@ function Earnings({ bookings }: { bookings: ServiceRequest[] }) {
 
   return (
     <section className="space-y-4">
-      <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+      <h2 className="flex items-center gap-2 text-[17px] font-semibold text-foreground">
         <Wallet className="h-5 w-5 text-primary" /> Earnings
       </h2>
       <Card>
@@ -437,7 +437,7 @@ function Earnings({ bookings }: { bookings: ServiceRequest[] }) {
           {paid.length > 0 && total === 0 && (
             <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
               <Inbox className="h-3.5 w-3.5" />
-              Your sessions are currently free — set a price in My Services to start earning.
+              Your sessions are currently free - set a price in My Services to start earning.
             </p>
           )}
         </CardContent>
@@ -465,14 +465,16 @@ function EmptyState({
 
 function HomeSkeleton() {
   return (
-    <div className="space-y-10">
-      <Skeleton className="h-9 w-40" />
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-6">
+      <Skeleton className="h-7 w-40" />
+      <div className="mobile-rail grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-60 w-full rounded-2xl" />
+          <Skeleton key={i} className="h-56 w-full rounded-2xl" />
         ))}
       </div>
-      <Skeleton className="h-24 w-full rounded-xl" />
+      <Skeleton className="h-7 w-32" />
+      <Skeleton className="h-20 w-full rounded-xl" />
+      <Skeleton className="h-20 w-full rounded-xl" />
     </div>
   );
 }

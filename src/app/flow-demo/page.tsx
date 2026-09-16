@@ -1,7 +1,7 @@
 import { FlowDemo } from "@/components/landing/FlowDemo";
 
 // Isolated preview of the flow-demo reel. Lets us review the component without
-// touching the landing/hero. Not linked from anywhere — visit /flow-demo.
+// touching the landing/hero. Not linked from anywhere - visit /flow-demo.
 export default function FlowDemoPreviewPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-background p-6">

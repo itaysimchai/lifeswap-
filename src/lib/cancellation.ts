@@ -1,4 +1,4 @@
-// Cancellation policy — the single source of truth, shared by the client (to
+// Cancellation policy - the single source of truth, shared by the client (to
 // show the refund before confirming) and the server (to enforce it).
 //
 //   • Free session (price 0)        → no refund (no money moved)
@@ -13,7 +13,7 @@ export function sessionStart(date?: string, time?: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** Fraction (0–1) of the price to refund. */
+/** Fraction (0-1) of the price to refund. */
 export function refundFraction(opts: {
   price: number;
   cancelledByHost: boolean;

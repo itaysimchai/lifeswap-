@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import type { Application } from "@/lib/types";
 import { byCreatedAtDesc, useCollectionData } from "./useCollectionData";
 
-/** Every provider application — admin approval queue. */
+/** Every provider application - admin approval queue. */
 export function useApplications() {
   return useCollectionData<Application>(
     () => collection(db, "applications"),

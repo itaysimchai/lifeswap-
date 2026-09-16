@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// Category "artwork" for session cards — since sessions have no photos, each
+// Category "artwork" for session cards - since sessions have no photos, each
 // category gets a distinct icon over a brand-aligned gradient (blue / slate /
 // gold family, no purple/teal) so the grid feels varied but stays on-brand.
 type Art = { gradient: string; Icon: LucideIcon };

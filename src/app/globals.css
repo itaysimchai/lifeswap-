@@ -4,7 +4,7 @@
 
 /* ─── Slate + Blue design tokens ──────────────────────────────────────────────
    "Trust & Authority": cool light-grey (slate) neutrals + a single professional
-   blue accent. No purple/teal. Light-blue tints come from primary/5–primary/10. */
+   blue accent. No purple/teal. Light-blue tints come from primary/5-primary/10. */
 @theme {
   /* Brand accent */
   --color-primary: #2563eb;
@@ -35,7 +35,7 @@
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
 
-  /* Signature accent — warm editorial gold. Pairs with the trust-blue to read
+  /* Signature accent - warm editorial gold. Pairs with the trust-blue to read
      "advisory / premium" (think FT, law firms). Used sparingly: the hero
      keyword underline and the "available now" status only. */
   --color-signature: #a16207;
@@ -43,7 +43,7 @@
 
   /* Typography
      Display = Fraunces, an optical old-style serif with real personality, used
-     with restraint on h1/h2 only — it carries the "learn from people who've
+     with restraint on h1/h2 only - it carries the "learn from people who've
      done it" editorial authority. Body/UI stays Inter. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
@@ -74,7 +74,7 @@
   --color-signature-foreground: #0b1220;
 }
 
-/* NOTE: do NOT add an unlayered `* { padding:0; margin:0 }` reset here — in
+/* NOTE: do NOT add an unlayered `* { padding:0; margin:0 }` reset here - in
    Tailwind v4 it would override every layered padding/margin utility (py-*, p-*,
    mt-*, …) app-wide. Preflight already resets box-sizing and element margins. */
 
@@ -90,7 +90,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* h3–h6 are small UI headings — kept on Inter for legibility at small sizes. */
+/* h3-h6 are small UI headings - kept on Inter for legibility at small sizes. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -99,7 +99,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Display moments only: hero + section heads wear Fraunces. opsz responds to
    size automatically, so big headings get the true display cut. Restraint is
-   the point — the serif is the signature, so it appears in few places. */
+   the point - the serif is the signature, so it appears in few places. */
 h1, h2 {
   font-family: var(--font-display);
   font-optical-sizing: auto;
@@ -188,7 +188,7 @@ h1, h2 {
   background: #94a3b8;
 }
 
-/* Horizontal rails (experts by category) — hide the scrollbar, keep scrolling. */
+/* Horizontal rails (experts by category) - hide the scrollbar, keep scrolling. */
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -265,7 +265,7 @@ h1, h2 {
   mask-image: radial-gradient(125% 118% at 50% 48%, #000 55%, transparent);
 }
 
-/* ScrollReelTestimonials — character rise + block exit */
+/* ScrollReelTestimonials - character rise + block exit */
 @keyframes scroll-reel-char-rise {
   to {
     opacity: 1;
@@ -302,3 +302,74 @@ h1, h2 {
 @font-face {font-family:LifeSwapInter;src:url(/fonts/inter.woff2) format("woff2");font-style:normal;font-weight:100 900;font-display:swap;}
 @font-face {font-family:LifeSwapFraunces;src:url(/fonts/fraunces.woff2) format("woff2");font-style:normal;font-weight:100 900;font-display:swap;}
 .lifeswap-fonts {--font-inter:LifeSwapInter,Arial,sans-serif;--font-fraunces:LifeSwapFraunces,Georgia,serif;}
+
+/* ─── Loading ────────────────────────────────────────────────────────────────
+   Two dots trading places. One rotation of the container swaps them exactly,
+   with a hold at each end so the exchange reads rather than blurs past. */
+.lifeswap-loader {
+  position: relative;
+  display: inline-block;
+  animation: lifeswap-swap 1.5s cubic-bezier(0.66, 0, 0.34, 1) infinite;
+}
+.lifeswap-loader-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+  background: var(--color-primary);
+}
+/* The gold is the brand's second voice; two colours make the swap legible. */
+.lifeswap-loader-dot.alt {
+  left: auto;
+  right: 0;
+  background: var(--color-signature);
+}
+@keyframes lifeswap-swap {
+  0%, 12% { transform: rotate(0deg); }
+  50%, 62% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.lifeswap-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 40vh;
+  padding: 32px;
+  text-align: center;
+}
+
+/* Skeletons: a sweep travelling across the surface reads as "content is on its
+   way"; a whole block pulsing reads as something broken and blinking. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-muted);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-card) 70%, transparent),
+    transparent
+  );
+  animation: lifeswap-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes lifeswap-sweep {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep a sign of life, drop the movement. */
+  .lifeswap-loader { animation: lifeswap-fade 1.4s ease-in-out infinite; }
+  .skeleton::after { animation: none; display: none; }
+  .skeleton { animation: lifeswap-fade 1.6s ease-in-out infinite; }
+  @keyframes lifeswap-fade { 50% { opacity: 0.45; } }
+}

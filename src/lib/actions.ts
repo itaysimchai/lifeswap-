@@ -184,7 +184,7 @@ export async function updateUserProfile(
 
 /**
  * Removes the user's own Firestore data ahead of deleting their auth account.
- * Must run while the user is still signed in — security rules scope these
+ * Must run while the user is still signed in - security rules scope these
  * deletes to the owner. Call this BEFORE deleteUser(), never after.
  *
  * Content owned jointly with other people (chat messages, bookings the other

@@ -18,7 +18,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-/** Earliest upcoming date with open slots, formatted "Thu, Jun 12" — or null. */
+/** Earliest upcoming date with open slots, formatted "Thu, Jun 12" - or null. */
 function nextSlot(availability?: Record<string, string[]>): string | null {
   if (!availability) return null;
   const today = new Date().toISOString().slice(0, 10);

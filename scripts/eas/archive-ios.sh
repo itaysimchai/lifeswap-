@@ -7,10 +7,10 @@
 # than inline YAML: shell embedded in a build config is parsed by the YAML block
 # scalar AND interpolated by EAS's template engine before bash sees it, which
 # silently corrupts quoting and any `${ ... }` sequence. A file can be
-# syntax-checked and dry-run locally — see scripts/eas/preflight.sh.
+# syntax-checked and dry-run locally - see scripts/eas/preflight.sh.
 #
 # Environment:
-#   EXPORT_METHOD              ad-hoc (default) | app-store   — set in eas.json
+#   EXPORT_METHOD              ad-hoc (default) | app-store   - set in eas.json
 #   EAS_BUILD_IOS_BUILD_NUMBER build number EAS tracks remotely (optional)
 #   EAS_BUILD_WORKINGDIR       repo root on the worker (optional)
 #   DRY_RUN                    resolve + render everything, skip xcodebuild
@@ -89,7 +89,7 @@ fi
 # number EAS tracks remotely over the static value in the pbxproj.
 #
 # NOTE: read this from the environment. Do NOT reference EAS's eas.job.version
-# template fields — EAS interpolates a run step's whole command string (comments
+# template fields - EAS interpolates a run step's whole command string (comments
 # included) before bash runs, and an unresolved field fails the step outright.
 BUILD_NUMBER="${EAS_BUILD_IOS_BUILD_NUMBER:-}"
 APP_VERSION=""

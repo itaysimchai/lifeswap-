@@ -16,7 +16,7 @@ export interface CollectionState<T> {
 /**
  * Generic real-time list subscription. Pass a factory that builds the query
  * (or returns `null` to stay idle, e.g. before the uid is known). An optional
- * client-side comparator keeps us off composite Firestore indexes — we filter
+ * client-side comparator keeps us off composite Firestore indexes - we filter
  * with `where(...)` in the query and sort here instead.
  */
 export function useCollectionData<T>(

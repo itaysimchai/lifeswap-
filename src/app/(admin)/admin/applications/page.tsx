@@ -46,7 +46,7 @@ export default function AdminApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div data-page-header>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Provider applications</h1>
         <p className="mt-1 text-muted-foreground">Review and approve provider applications.</p>
       </div>

@@ -90,7 +90,7 @@ export default function MyServicesPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div data-page-header>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">My services</h1>
           <p className="mt-1 text-muted-foreground">
             Create and manage the services clients can book.

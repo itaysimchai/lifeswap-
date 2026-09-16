@@ -36,7 +36,7 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="flex-1">
-        {/* Hero — the experts lead the page. Copy on the left, a "hand" of real,
+        {/* Hero - the experts lead the page. Copy on the left, a "hand" of real,
             bookable experts on the right as the signature element. */}
         <section className="relative overflow-hidden border-b border-border">
           <div
@@ -84,7 +84,7 @@ export default function LandingPage() {
         {/* How it works */}
         <HowItWorks />
 
-        {/* Our experts — four featured people: their careers + how they help */}
+        {/* Our experts - four featured people: their careers + how they help */}
         <FeaturedExperts />
 
         {/* Become a provider */}

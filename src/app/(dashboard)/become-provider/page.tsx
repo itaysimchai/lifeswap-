@@ -126,7 +126,7 @@ export default function BecomeProviderPage() {
         icon={<Clock className="h-7 w-7" />}
         tone="warning"
         title="Application under review"
-        body="Thanks for applying. Our team typically reviews applications within 2–3 business days, and you'll see the result here."
+        body="Thanks for applying. Our team typically reviews applications within 2-3 business days, and you'll see the result here."
         action={
           <Button variant="outline" onClick={() => router.push("/dashboard")}>
             Back to dashboard
@@ -139,7 +139,7 @@ export default function BecomeProviderPage() {
   // ── Application form ─────────────────────────────────────────────────────
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
+      <div className="mb-8" data-page-header>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Become a provider
         </h1>
@@ -318,7 +318,7 @@ export default function BecomeProviderPage() {
 
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
                   <strong className="font-semibold">What happens next?</strong> Our team
-                  reviews your application within 2–3 business days. You&apos;ll see the
+                  reviews your application within 2-3 business days. You&apos;ll see the
                   result on this page.
                 </div>
               </div>

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 // "Our experts": four featured people from a mix of fields. The copy leads with
 // who they are and what they've done (credibility) and how they can actually
-// help you — no prices here, just the people. Portraits are Unsplash
+// help you - no prices here, just the people. Portraits are Unsplash
 // placeholders; the Avatar falls back to initials if an image fails to load.
 type Expert = {
   name: string;
@@ -45,7 +45,7 @@ const EXPERTS: Expert[] = [
     role: "Applied ML Engineer",
     field: "Data & AI",
     career: "Built machine-learning products end to end",
-    help: "Takes you from zero to a working model — practical, hands-on, and no heavy math needed to get started.",
+    help: "Takes you from zero to a working model - practical, hands-on, and no heavy math needed to get started.",
     src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=320&auto=format&fit=crop",
   },
 ];

@@ -30,7 +30,7 @@ function stampUTC(d: Date): string {
 
 export function googleCalendarLink(d: BookingDetails): string {
   const { start, end } = startEnd(d.date, d.time);
-  const text = encodeURIComponent(`${d.serviceTitle} — ${APP_NAME}`);
+  const text = encodeURIComponent(`${d.serviceTitle} - ${APP_NAME}`);
   const details = encodeURIComponent(
     `Session with ${d.providerName}, booked on ${APP_NAME}.`
   );
@@ -41,7 +41,7 @@ export function googleCalendarLink(d: BookingDetails): string {
 
 export function outlookCalendarLink(d: BookingDetails): string {
   const { start, end } = startEnd(d.date, d.time);
-  const subject = encodeURIComponent(`${d.serviceTitle} — ${APP_NAME}`);
+  const subject = encodeURIComponent(`${d.serviceTitle} - ${APP_NAME}`);
   const body = encodeURIComponent(
     `Session with ${d.providerName}, booked on ${APP_NAME}.`
   );
@@ -104,7 +104,7 @@ export function buildCustomerEmail(d: BookingDetails) {
     ["Amount paid", fmtPrice(d.price)],
   ];
   return {
-    subject: `Your booking is confirmed — ${d.serviceTitle}`,
+    subject: `Your booking is confirmed - ${d.serviceTitle}`,
     html: shell(
       "Your booking is confirmed",
       `You're all set for your session with ${d.providerName}. Add it to your calendar below, and you can message ${d.providerName} anytime in the app.`,
@@ -126,7 +126,7 @@ export function buildProviderEmail(d: BookingDetails) {
     ["Amount", fmtPrice(d.price)],
   ];
   return {
-    subject: `New session booked — ${d.serviceTitle}`,
+    subject: `New session booked - ${d.serviceTitle}`,
     html: shell(
       "You have a new booking",
       `${d.requesterName} just booked your service. Add it to your calendar, and reach out in the app if you need to adjust the time.`,
@@ -154,7 +154,7 @@ export function buildCancellationCustomerEmail(d: CancellationDetails) {
     ? `${d.providerName} had to cancel your session.${refunded ? ` You've been fully refunded ${refunded}, on its way back to your PayPal.` : ""}`
     : `Your session has been cancelled.${refunded ? ` A refund of ${refunded} is on its way back to your PayPal.` : ""}`;
   return {
-    subject: `Session cancelled — ${d.serviceTitle}`,
+    subject: `Session cancelled - ${d.serviceTitle}`,
     html: shell("Session cancelled", intro, rows, ""),
   };
 }
@@ -171,7 +171,7 @@ export function buildCancellationProviderEmail(d: CancellationDetails) {
     ? `You cancelled this session. ${d.requesterName} has been fully refunded.`
     : `${d.requesterName} cancelled this session.${refunded ? ` They were refunded ${refunded}.` : ""} The time slot is open for booking again.`;
   return {
-    subject: `Session cancelled — ${d.serviceTitle}`,
+    subject: `Session cancelled - ${d.serviceTitle}`,
     html: shell("Session cancelled", intro, rows, ""),
   };
 }

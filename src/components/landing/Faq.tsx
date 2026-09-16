@@ -11,7 +11,7 @@ const FAQS = [
   },
   {
     q: "Are the providers vetted?",
-    a: "Yes. Anyone who wants to offer services applies first and is reviewed and approved by our team before they can publish — so you're always booking real, approved experts.",
+    a: "Yes. Anyone who wants to offer services applies first and is reviewed and approved by our team before they can publish - so you're always booking real, approved experts.",
   },
   {
     q: "How do I become a provider?",
@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "What does it cost?",
-    a: "Browsing and signing up are free. You only pay for the sessions you book, and providers set their own prices — so you always see the cost up front before you confirm.",
+    a: "Browsing and signing up are free. You only pay for the sessions you book, and providers set their own prices - so you always see the cost up front before you confirm.",
   },
 ];
 

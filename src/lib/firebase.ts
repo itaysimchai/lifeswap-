@@ -8,6 +8,7 @@ import {
   type Auth,
 } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || publicConfig.NEXT_PUBLIC_FIREBASE_API_KEY),
@@ -36,6 +37,12 @@ function createAuth(): Auth {
 
 export const auth = createAuth();
 export const db = getFirestore(app);
+export const storage = getStorage(app);
+// The SDK retries a failed upload for two minutes by default, which turns a
+// misconfigured bucket into a spinner that never resolves. Fail in seconds so
+// the UI can say what went wrong.
+storage.maxUploadRetryTime = 15_000;
+storage.maxOperationRetryTime = 15_000;
 
 // Local dev: point the SDK at the Firebase Emulator Suite (npm run emulators).
 // Guarded so Fast Refresh / repeated imports don't reconnect.
@@ -50,6 +57,7 @@ if (
 ) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
   globalThis.__fbEmulatorsConnected = true;
 }
 

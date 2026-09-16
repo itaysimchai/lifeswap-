@@ -26,7 +26,7 @@ export function useChats(uid: string | undefined) {
   );
 }
 
-/** Live message thread for a chat (oldest first — a single-field index). */
+/** Live message thread for a chat (oldest first - a single-field index). */
 export function useMessages(chatId: string | undefined) {
   return useCollectionData<Message>(
     () =>

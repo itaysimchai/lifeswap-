@@ -11,7 +11,7 @@ const STEPS = [
   {
     icon: CalendarCheck,
     title: "Book a time",
-    body: "Found something useful? Pick an available date and slot, then pay to confirm your session — no back-and-forth approvals.",
+    body: "Found something useful? Pick an available date and slot, then pay to confirm your session - no back-and-forth approvals.",
   },
   {
     icon: MessagesSquare,
@@ -34,7 +34,7 @@ export function HowItWorks() {
               From browsing to talking in three steps
             </h2>
             <p className="mt-4 max-w-prose leading-relaxed text-muted-foreground">
-              Getting help on LifeSwap is simple. Scroll through the journey — from
+              Getting help on LifeSwap is simple. Scroll through the journey - from
               finding a provider to talking with them once your session is booked.
             </p>
           </div>

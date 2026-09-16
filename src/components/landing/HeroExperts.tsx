@@ -5,8 +5,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // The hero's signature: a small "hand" of real experts. At rest it's a tidy
-// stack; hovering the deck fans the cards apart left-to-right so each person —
-// face, name, specialty, availability — can be read at a glance, then it
+// stack; hovering the deck fans the cards apart left-to-right so each person -
+// face, name, specialty, availability - can be read at a glance, then it
 // re-stacks on leave. Hover-only and non-interactive by design (the hero
 // buttons carry the actions).
 // Portraits are Unsplash placeholders; swap for featured providers later.
@@ -39,7 +39,7 @@ const EXPERTS: Expert[] = [
 ];
 
 // Index 0 stays on top (z 30) in both states for visual continuity. Cards keep
-// their avatar on the left, so the fan exposes each card's left edge — the
+// their avatar on the left, so the fan exposes each card's left edge - the
 // face + name stay readable even with the slight overlap.
 const REST = [
   { x: 0, y: 0, scale: 1, rotate: 0, z: 30 },

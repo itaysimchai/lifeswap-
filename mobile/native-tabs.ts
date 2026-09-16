@@ -9,16 +9,18 @@ interface NativeTabsPlugin {
   addListener(event: 'insetChanged', listener: (event: { bottom: number }) => void): Promise<PluginListenerHandle>;
 }
 const NativeTabs = registerPlugin<NativeTabsPlugin>('NativeTabs');
-const routes: Record<string, string> = { home: '/home', explore: '/dashboard', messages: '/messages' };
+// Account is a destination now, not a menu: everything it used to offer lives
+// on the settings screen.
+const routes: Record<string, string> = { home: '/home', explore: '/dashboard', messages: '/messages', account: '/profile' };
 
-export function useNativeTabs(signedIn: boolean, unread: boolean, accountOpen: boolean, openAccount: () => void) {
+export function useNativeTabs(signedIn: boolean, unread: boolean) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const [ready, setReady] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const callbacks = useRef({ navigate, openAccount });
-  callbacks.current = { navigate, openAccount };
+  const callbacks = useRef({ navigate });
+  callbacks.current = { navigate };
 
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'ios' || !Capacitor.isPluginAvailable('NativeTabs')) return;
@@ -31,8 +33,7 @@ export function useNativeTabs(signedIn: boolean, unread: boolean, accountOpen: b
     void (async () => {
       try {
         await listen(NativeTabs.addListener('tabSelected', ({ id }) => {
-          if (id === 'account') callbacks.current.openAccount();
-          else if (routes[id]) callbacks.current.navigate(routes[id]);
+          if (routes[id]) callbacks.current.navigate(routes[id]);
         }));
         await listen(NativeTabs.addListener('insetChanged', ({ bottom }) => {
           document.documentElement.style.setProperty('--native-tab-inset', `${Math.max(0, bottom)}px`);
@@ -69,12 +70,12 @@ export function useNativeTabs(signedIn: boolean, unread: boolean, accountOpen: b
 
   useEffect(() => {
     if (!ready) return;
-    void NativeTabs.configure({ visible: signedIn && !accountOpen && !modalOpen, selected, unread, theme: resolvedTheme ?? 'system' })
+    void NativeTabs.configure({ visible: signedIn && !modalOpen, selected, unread, theme: resolvedTheme ?? 'system' })
       .catch(error => {
         console.warn('Native navigation failed; using web tabs.', error);
         setReady(false);
         void NativeTabs.configure({ visible: false, selected, unread: false, theme: 'system' }).catch(() => {});
       });
-  }, [ready, signedIn, accountOpen, modalOpen, selected, unread, resolvedTheme]);
+  }, [ready, signedIn, modalOpen, selected, unread, resolvedTheme]);
   return ready;
 }

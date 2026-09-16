@@ -10,7 +10,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Soft colored shadow + a 1px lift on hover — distinctive but restrained.
+        // Soft colored shadow + a 1px lift on hover - distinctive but restrained.
         default:
           "bg-primary text-primary-foreground shadow-sm shadow-primary/25 ring-1 ring-inset ring-white/10 hover:-translate-y-px hover:bg-primary/95 hover:shadow-md hover:shadow-primary/30 active:translate-y-0 active:shadow-sm",
         destructive:
@@ -49,7 +49,7 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild, loading, children, disabled, ...props }, ref) => {
     // When asChild, render the child element (e.g. a Next.js <Link>) with the
-    // button styles — avoids invalid nested <a>/<button> markup.
+    // button styles - avoids invalid nested <a>/<button> markup.
     if (asChild) {
       return (
         <Slot

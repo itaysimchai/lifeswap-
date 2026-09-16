@@ -14,7 +14,7 @@ const PANEL_SERVICES = [
 const BULLETS = [
   { k: "Services", v: "publish and manage everything you offer" },
   { k: "Availability", v: "set your own dates and time slots" },
-  { k: "Bookings", v: "paid and confirmed up front — no chasing" },
+  { k: "Bookings", v: "paid and confirmed up front - no chasing" },
   { k: "Earnings", v: "tracked by week, month, year, and lifetime" },
 ];
 
@@ -90,7 +90,7 @@ export function ProviderShowcase() {
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
               Apply once, get approved, and start offering your expertise. Publish
-              services, set your availability, and get paid bookings — all from one
+              services, set your availability, and get paid bookings - all from one
               simple dashboard.
             </p>
             <ul className="mt-6 space-y-2.5">

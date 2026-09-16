@@ -1,4 +1,4 @@
-# LifeSwap iOS — first TestFlight build candidate
+# LifeSwap iOS - first TestFlight build candidate
 
 This package contains the mobile source, a generated Xcode project, and bundled
 web assets. It is not a signed IPA and has not been uploaded to TestFlight.

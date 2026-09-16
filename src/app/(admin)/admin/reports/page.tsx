@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div data-page-header>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Reports</h1>
         <p className="mt-1 text-muted-foreground">
           Review user reports and block accounts when needed.

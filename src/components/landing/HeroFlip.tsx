@@ -21,7 +21,7 @@ export function HeroFlip() {
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={reduce ? { duration: 0 } : { duration: 0.7, ease: "easeInOut" }}
       >
-        {/* FRONT — experts deck */}
+        {/* FRONT - experts deck */}
         <div
           className="group absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-8 [backface-visibility:hidden] focus:outline-none"
           onClick={() => setFlipped(true)}
@@ -42,7 +42,7 @@ export function HeroFlip() {
           </span>
         </div>
 
-        {/* BACK — live flow demo */}
+        {/* BACK - live flow demo */}
         <div
           className="absolute inset-0 cursor-pointer [backface-visibility:hidden] [transform:rotateY(180deg)] focus:outline-none"
           onClick={() => setFlipped(false)}

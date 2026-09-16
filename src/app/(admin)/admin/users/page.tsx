@@ -56,7 +56,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div data-page-header>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Users</h1>
         <p className="mt-1 text-muted-foreground">Manage accounts and block abusive users.</p>
       </div>

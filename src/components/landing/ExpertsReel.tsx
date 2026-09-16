@@ -1,7 +1,7 @@
 import React from "react";
 import { CircularTestimonials } from "@/components/ui/circular-testimonials";
 
-// Sample experts for the marketing carousel — swap names/photos for real
+// Sample experts for the marketing carousel - swap names/photos for real
 // featured providers later. Portraits are Unsplash placeholders.
 const EXPERTS = [
   {
@@ -20,7 +20,7 @@ const EXPERTS = [
   },
   {
     quote:
-      "From zero to a working ML model — practical, hands-on, and friendly, with no heavy math prerequisites to get started.",
+      "From zero to a working ML model - practical, hands-on, and friendly, with no heavy math prerequisites to get started.",
     name: "Aisha Rahman",
     designation: "Data Science & AI",
     src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1200&auto=format&fit=crop",

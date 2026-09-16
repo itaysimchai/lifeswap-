@@ -23,7 +23,7 @@ export interface Service {
   providerName: string;
   /** Host's photo, denormalized at create time so cards can show it. */
   providerPhotoURL?: string | null;
-  /** Optional — the provider chooses whether to show a LinkedIn link on the card. */
+  /** Optional - the provider chooses whether to show a LinkedIn link on the card. */
   providerLinkedin?: string | null;
   title: string;
   description: string;
@@ -67,7 +67,7 @@ export interface ServiceRequest {
   paymentMethod?: PaymentMethod;
   paymentStatus?: "paid";
   status: RequestStatus;
-  /** Set when cancelled — who cancelled and how much was refunded. */
+  /** Set when cancelled - who cancelled and how much was refunded. */
   cancelledBy?: "host" | "customer";
   refundAmount?: number;
   createdAt?: Timestamp | null;
@@ -81,7 +81,7 @@ export interface Chat {
   serviceTitle?: string;
   lastMessage?: string;
   lastMessageAt?: Timestamp | null;
-  /** Who sent the most recent message — used to flag *received* (not sent) unread. */
+  /** Who sent the most recent message - used to flag *received* (not sent) unread. */
   lastSenderId?: string;
   /** Per-user "last read" time; a chat is unread when lastMessageAt is newer. */
   lastRead?: Record<string, Timestamp>;

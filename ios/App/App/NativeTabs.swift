@@ -33,8 +33,9 @@ public class NativeTabsPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-// One Capacitor bridge is moved between lightweight tab hosts. React owns the
-// navigation state; UIKit owns the system tab bar and its glass material.
+// One Capacitor bridge is parented to this controller and never moves. React
+// owns the navigation state; UIKit owns the system tab bar and its glass
+// material, and its child view controllers exist only to carry tab items.
 final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegate {
     private let content = LifeSwapBridgeViewController()
     private let tabIDs = ["home", "explore", "messages", "account"]
@@ -64,16 +65,32 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
 
     deinit { NotificationCenter.default.removeObserver(self) }
 
+    // Hosting the web view on the selected child meant every tab change detached
+    // WKWebView from the hierarchy and re-added it, costing a frame of blank
+    // while it rebuilt its render surface. It now belongs to this controller for
+    // the lifetime of the app; selection only swaps the empty children behind it.
     private func attachContent() {
-        guard let target = selectedViewController, content.parent !== target else { return }
-        content.willMove(toParent: nil)
-        content.view.removeFromSuperview()
-        content.removeFromParent()
-        target.addChild(content)
-        target.view.addSubview(content.view)
-        content.view.frame = target.view.bounds
+        guard content.parent !== self else { return }
+        addChild(content)
+        content.view.frame = view.bounds
         content.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        content.didMove(toParent: target)
+        view.addSubview(content.view)
+        content.didMove(toParent: self)
+    }
+
+    // Selecting a tab inserts that child's view into our own view, which can
+    // land above the web view. Keep the web view directly beneath the tab bar.
+    private func restoreContentOrder() {
+        guard content.isViewLoaded, content.view.superview === view else { return }
+        let subviews = view.subviews
+        guard let contentIndex = subviews.firstIndex(of: content.view) else { return }
+        if let barIndex = subviews.firstIndex(of: tabBar) {
+            guard contentIndex != barIndex - 1 else { return }
+            view.insertSubview(content.view, belowSubview: tabBar)
+        } else {
+            guard contentIndex != subviews.count - 1 else { return }
+            view.bringSubviewToFront(content.view)
+        }
     }
 
     func configure(visible: Bool, selected: String, unread: Bool, theme: String) {
@@ -81,7 +98,7 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
         overrideUserInterfaceStyle = theme == "dark" ? .dark : theme == "light" ? .light : .unspecified
         if let index = tabIDs.firstIndex(of: selected), selectedIndex != index {
             selectedIndex = index
-            attachContent()
+            restoreContentOrder()
         }
         viewControllers?[2].tabBarItem.badgeValue = unread ? "•" : nil
         updateVisibility()
@@ -116,6 +133,7 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        restoreContentOrder()
         publishInset()
     }
 

@@ -35,7 +35,7 @@ export function CancelDialog({
 
   let refundLine: string;
   if (price <= 0) {
-    refundLine = "This is a free session — there's no payment to refund.";
+    refundLine = "This is a free session - there's no payment to refund.";
   } else if (cancelledByHost) {
     refundLine = `Your customer will be fully refunded $${amount.toFixed(2)}.`;
   } else if (fraction >= 1) {
@@ -43,7 +43,7 @@ export function CancelDialog({
   } else {
     refundLine = `It's within 24 hours of the session, so you'll be refunded $${amount.toFixed(
       2
-    )} — half the price.`;
+    )} - half the price.`;
   }
 
   async function confirm() {
@@ -65,7 +65,7 @@ export function CancelDialog({
         <DialogHeader>
           <DialogTitle>Cancel this session?</DialogTitle>
           <DialogDescription>
-            {booking.serviceTitle} —{" "}
+            {booking.serviceTitle} -{" "}
             {perspective === "customer"
               ? `with ${booking.providerName}`
               : `booked by ${booking.requesterName}`}

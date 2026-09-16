@@ -5,7 +5,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { UserProfile } from "@/lib/types";
 
-/** All users — admin user-management table. Maps the doc id onto `uid`. */
+/** All users - admin user-management table. Maps the doc id onto `uid`. */
 export function useUsers() {
   const [data, setData] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);

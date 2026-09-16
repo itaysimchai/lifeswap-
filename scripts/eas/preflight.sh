@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Static checks for the iOS build pipeline. Run before pushing a build config
-# change — every failure below has cost a real EAS build at least once.
+# change - every failure below has cost a real EAS build at least once.
 #
 #   npm run verify:ios
 #

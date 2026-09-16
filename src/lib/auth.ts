@@ -49,7 +49,7 @@ export function authErrorMessage(e: unknown): string {
     case "auth/account-exists-with-different-credential":
       return "You already signed up with this email using a different method. Sign in that way instead.";
     case "auth/network-request-failed":
-      return "Network error. Check your connection — in local dev, make sure the Firebase emulator is running.";
+      return "Network error. Check your connection - in local dev, make sure the Firebase emulator is running.";
     case "auth/api-key-not-valid":
     case "auth/invalid-api-key":
       return "App configuration error (invalid Firebase API key).";

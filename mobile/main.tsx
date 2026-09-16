@@ -1,15 +1,19 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, MessageSquare, Loader2, ChevronLeft } from 'lucide-react';
+import { Home, Search, MessageSquare, ChevronLeft } from 'lucide-react';
 import { Network } from '@capacitor/network';
+import { useTheme } from 'next-themes';
 import { Providers } from '@/providers/Providers';
 import { useAuth } from '@/providers/AuthProvider';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import DashboardLayout from '@/app/(dashboard)/layout';
 import AuthLayout from '@/app/(auth)/layout';
 import AdminLayout from '@/app/(admin)/layout';
-import { installExternalLinks } from './runtime';
+import { LoadingScreen } from '@/components/ui/loader';
+import { installExternalLinks, installPressStates } from './runtime';
+import { installPushRouting } from '@/lib/push';
+import { useScreenTitleStore } from '@/lib/screen-title';
 import { useNativeTabs } from './native-tabs';
 import '@/app/globals.css';
 import './mobile.css';
@@ -19,6 +23,7 @@ const Forgot=lazy(()=>import('@/app/(auth)/forgot-password/page'));
 const Overview=lazy(()=>import('@/app/(dashboard)/home/page'));
 const Browse=lazy(()=>import('@/app/(dashboard)/dashboard/page'));
 const Messages=lazy(()=>import('@/app/(dashboard)/messages/page'));
+const ChatThread=lazy(()=>import('@/app/(dashboard)/messages/[chatId]/page'));
 const Profile=lazy(()=>import('@/app/(dashboard)/profile/page'));
 const MyServices=lazy(()=>import('@/app/(dashboard)/my-services/page'));
 const Provider=lazy(()=>import('@/app/(dashboard)/become-provider/page'));
@@ -30,7 +35,7 @@ const Applications=lazy(()=>import('@/app/(admin)/admin/applications/page'));
 const Reports=lazy(()=>import('@/app/(admin)/admin/reports/page'));
 const Users=lazy(()=>import('@/app/(admin)/admin/users/page'));
 const Success=lazy(()=>import('@/app/booking/success/page'));
-function Loading(){return <div className="mobile-loading" role="status"><Loader2 className="animate-spin"/><span>Opening LifeSwap…</span></div>;}
+function Loading(){return <LoadingScreen label="Opening LifeSwap"/>;}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{failed:boolean}>{
  state={failed:false};static getDerivedStateFromError(){return {failed:true};}
  render(){return this.state.failed?<div className="mobile-loading"><h1>LifeSwap couldn’t open this page</h1><button onClick={()=>window.location.assign('/home')}>Try again</button></div>:this.props.children;}
@@ -44,12 +49,30 @@ const TABS=[
 // than navigating, so it lights up for anything that menu leads to - otherwise
 // the indicator would never appear.
 const ACCOUNT_ROUTES=['/profile','/my-services','/become-provider','/admin'];
-const TITLES:Record<string,string>={'/home':'Home','/dashboard':'Explore','/messages':'Messages','/profile':'Profile',
+const TITLES:Record<string,string>={'/home':'Home','/dashboard':'Explore','/messages':'Messages','/profile':'Profile & Settings',
  '/my-services':'My services','/become-provider':'Become a provider','/admin':'Admin',
  '/admin/applications':'Applications','/admin/reports':'Reports','/admin/users':'Users',
  '/privacy':'Privacy','/terms':'Terms','/booking/success':'Booking'};
+const SUBTITLES:Record<string,string>={
+ '/dashboard':'Find a service, pick a time, and pay to confirm.',
+ '/messages':'Chat with people once a request is accepted.',
+ '/profile':'Manage your account, appearance, and notifications.',
+ '/my-services':'Create and manage the services clients can book.',
+ '/become-provider':'Share your expertise and offer your own services.',
+ '/admin':'Platform health at a glance.',
+ '/admin/applications':'Review and approve provider applications.',
+ '/admin/users':'Manage accounts and block abusive users.',
+ '/admin/reports':'Review user reports and block accounts when needed.'};
+// In-app screens follow platform conventions; auth and legal keep the editorial
+// brand voice, so the serif and the marketing spacing stay there.
+const IN_APP=['/home','/dashboard','/messages','/profile','/my-services','/become-provider','/admin','/services/'];
+function isInApp(pathname:string){return IN_APP.some(p=>pathname===p||pathname.startsWith(p==='/services/'?p:p+'/'));}
+const DETAIL=['/messages/','/services/'];
+function isDetail(pathname:string){return DETAIL.some(p=>pathname.startsWith(p)&&pathname.length>p.length);}
+function greeting(){const h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening';}
 function titleFor(pathname:string){
  if(TITLES[pathname])return TITLES[pathname];
+ if(pathname.startsWith('/messages/'))return 'Chat';
  if(pathname.startsWith('/services/'))return 'Service';
  return 'LifeSwap';
 }
@@ -61,73 +84,95 @@ function initialsOf(name?:string|null,email?:string|null){
 /* photoURL is an arbitrary URL from Firestore, so show initials until the image
    has actually decoded and fall back permanently if it errors - a dead link must
    never leave a broken icon in the tab bar. */
-function TabAvatar(){
+function Avatar({size}:{size?:'lg'}){
  const {user,profile}=useAuth();
  const url=profile?.photoURL;
  const [ready,setReady]=useState(false);
  useEffect(()=>{setReady(false);},[url]);
- return <span className="mobile-avatar-wrap">
+ return <span className={size?`mobile-avatar-wrap ${size}`:'mobile-avatar-wrap'}>
   {(!url||!ready)&&<span className="mobile-avatar-fallback">{initialsOf(profile?.displayName,user?.email)}</span>}
   {url&&<img src={url} alt="" className={ready?'mobile-avatar-img ready':'mobile-avatar-img'}
     onLoad={()=>setReady(true)} onError={()=>setReady(false)}/>}
  </span>;
 }
-/* Account sheet: rises from the bottom above the tab bar. Contents vary by role
-   - Admin is included because, with the title-bar menu gone, this is an admin's
-   only route to /admin. */
-function AccountSheet({open,onClose}:{open:boolean;onClose:()=>void}){
- const {profile,signOut}=useAuth();
- const navigate=useNavigate();
- useEffect(()=>{
-  if(!open)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};
-  window.addEventListener('keydown',onKey);
-  return()=>window.removeEventListener('keydown',onKey);
- },[open,onClose]);
- if(!open)return null;
- const go=(to:string)=>{onClose();navigate(to);};
- const items=[
-  profile?.isProvider?{label:'My Services',to:'/my-services'}:{label:'Become a provider',to:'/become-provider'},
-  ...(profile?.role==='admin'?[{label:'Admin',to:'/admin'}]:[]),
-  {label:'Profile & Settings',to:'/profile'},
- ];
- return <div className="mobile-sheet-root">
-  <div className="mobile-sheet-scrim" onClick={onClose}/>
-  <div className="mobile-sheet" role="menu" aria-label="Account">
-   {items.map(i=><button key={i.to} type="button" role="menuitem" onClick={()=>go(i.to)}>{i.label}</button>)}
-   <button type="button" role="menuitem" className="danger" onClick={()=>{onClose();void signOut();}}>Sign Out</button>
-  </div>
- </div>;
-}
 /* Native-style title bar: screen title plus a back affordance on nested screens.
    Account actions live in the tab-bar sheet, so nothing else belongs up here. */
-function TitleBar(){
+function TitleBar({collapsed}:{collapsed:boolean}){
  const {pathname}=useLocation();
  const navigate=useNavigate();
  const isTabRoot=TABS.some(t=>t.to===pathname);
- return <header className="mobile-titlebar">
+ // A pushed screen can name itself; otherwise the route table decides.
+ const screenTitle=useScreenTitleStore(state=>state.title);
+ return <header className={collapsed?'mobile-titlebar collapsed':'mobile-titlebar'}>
   <div className="mobile-titlebar-slot">
    {!isTabRoot&&<button type="button" aria-label="Back" onClick={()=>navigate(-1)}><ChevronLeft size={26}/></button>}
   </div>
-  <h1>{titleFor(pathname)}</h1>
+  <h1 aria-hidden={!collapsed}>{screenTitle??titleFor(pathname)}</h1>
   <div className="mobile-titlebar-slot right"/>
  </header>;
 }
+/* The page's own header is hidden inside the shell (see [data-page-header] in
+   mobile.css) so the title is stated once, here, where the chrome lives. */
+function LargeTitle(){
+ const {pathname}=useLocation();
+ const {profile}=useAuth();
+ const title=pathname==='/home'
+  ?`${greeting()}${profile?.displayName?`, ${profile.displayName.trim().split(/\s+/)[0]}`:''}`
+  :titleFor(pathname);
+ const subtitle=SUBTITLES[pathname];
+ return <div className="mobile-largetitle">
+  <h1>{title}</h1>
+  {subtitle&&<p>{subtitle}</p>}
+ </div>;
+}
 function Shell(){
- const {user}=useAuth();const {pathname}=useLocation();const [online,setOnline]=useState(true);
+ const {user}=useAuth();const {pathname}=useLocation();const navigate=useNavigate();const [online,setOnline]=useState(true);
  const hasUnread=useUnreadMessages(user?.uid);
- const [accountOpen,setAccountOpen]=useState(false);
- const nativeTabs=useNativeTabs(!!user,hasUnread,accountOpen,()=>setAccountOpen(true));
+ const scroller=React.useRef<HTMLDivElement>(null);
+ const [collapsed,setCollapsed]=useState(false);
+ const nativeTabs=useNativeTabs(!!user,hasUnread);
  const accountActive=ACCOUNT_ROUTES.some(r=>pathname===r||pathname.startsWith(r+'/'));
+ const {resolvedTheme}=useTheme();
+ const inApp=isInApp(pathname);
+ const detail=isDetail(pathname);
+ const thread=pathname.startsWith('/messages/');
+ /* Safari does not repaint a backdrop-filter layer when a custom property it
+    depends on changes, so the translucent bars keep the previous theme's colour
+    until something else forces a composite - which reads as the theme switch
+    only half working. Drop the filter for one frame to invalidate them. */
+ useEffect(()=>{
+  const root=document.documentElement;
+  root.classList.add('theme-repaint');
+  const id=requestAnimationFrame(()=>root.classList.remove('theme-repaint'));
+  return()=>{cancelAnimationFrame(id);root.classList.remove('theme-repaint');};
+ },[resolvedTheme]);
  useEffect(()=>installExternalLinks(),[]);
+ useEffect(()=>installPressStates(),[]);
+ useEffect(()=>installPushRouting(to=>navigate(to)),[navigate]);
+ /* Cross-fade the compact title in once the large one has scrolled under the
+    bar. A fixed threshold keeps this off the layout path - measuring the title
+    on every frame would force a reflow mid-scroll for a few pixels of accuracy. */
+ useEffect(()=>{
+  const el=scroller.current;
+  if(!el||!inApp||detail){setCollapsed(false);return;}
+  let frame=0;
+  const read=()=>{frame=0;setCollapsed(el.scrollTop>32);};
+  const onScroll=()=>{if(!frame)frame=requestAnimationFrame(read);};
+  el.addEventListener('scroll',onScroll,{passive:true});
+  read();
+  return()=>{el.removeEventListener('scroll',onScroll);if(frame)cancelAnimationFrame(frame);};
+ },[inApp,detail,pathname]);
  useEffect(()=>{let disposed=false;let remove:(()=>void)|undefined;void Network.getStatus().then(s=>!disposed&&setOnline(s.connected));void Network.addListener('networkStatusChange',s=>setOnline(s.connected)).then(h=>{if(disposed)void h.remove();else remove=()=>void h.remove();});return()=>{disposed=true;remove?.();};},[]);
- useEffect(()=>{window.scrollTo(0,0);setAccountOpen(false);},[pathname]);
+ // The document never scrolls (html/body are overflow:hidden), so window.scrollTo
+ // was a no-op and every navigation inherited the previous page's offset. Reset
+ // the actual scroller instead.
+ useEffect(()=>{scroller.current?.scrollTo(0,0);},[pathname]);
  const dashboard=(node:React.ReactNode)=><DashboardLayout>{node}</DashboardLayout>;
  const admin=(node:React.ReactNode)=><AdminLayout>{node}</AdminLayout>;
- return <div className={`mobile-app${user?' signed-in':''}${nativeTabs?' native-tabs':''}`}>
-  {user&&<TitleBar/>}
+ return <div className={`mobile-app${user?' signed-in':''}${nativeTabs?' native-tabs':''}${inApp?' in-app':''}${thread?' thread':''}`}>
+  {user&&<TitleBar collapsed={collapsed||!inApp||detail}/>}
   {!online&&<div className="offline-banner" role="status">You’re offline. Reconnect to load updates and send messages.</div>}
-  <div className="mobile-scroll"><Suspense fallback={<Loading/>}><Routes>
+  <div className="mobile-scroll" ref={scroller}>{user&&inApp&&!detail&&<LargeTitle/>}<Suspense fallback={<Loading/>}><Routes>
    <Route path="/" element={<Navigate to="/home" replace/>}/>
    <Route path="/login" element={<AuthLayout><Login/></AuthLayout>}/>
    <Route path="/register" element={<AuthLayout><Register/></AuthLayout>}/>
@@ -135,6 +180,7 @@ function Shell(){
    <Route path="/home" element={dashboard(<Overview/>)}/>
    <Route path="/dashboard" element={dashboard(<Browse/>)}/>
    <Route path="/messages" element={dashboard(<Messages/>)}/>
+   <Route path="/messages/:chatId" element={dashboard(<ChatThread/>)}/>
    <Route path="/profile" element={dashboard(<Profile/>)}/>
    <Route path="/my-services" element={dashboard(<MyServices/>)}/>
    <Route path="/my-dashboard" element={<Navigate to="/my-services" replace/>}/>
@@ -148,7 +194,6 @@ function Shell(){
    <Route path="/admin/users" element={admin(<Users/>)}/>
    <Route path="*" element={<div className="mobile-loading"><h1>Page not found</h1><NavLink to="/home">Back to LifeSwap</NavLink></div>}/>
   </Routes></Suspense></div>
-  {user&&<AccountSheet open={accountOpen} onClose={()=>setAccountOpen(false)}/>}
   {user&&!nativeTabs&&<nav className="mobile-tabbar" aria-label="Main navigation">
    {TABS.map(({to,label,Icon})=>
     <NavLink key={to} to={to} className={({isActive})=>isActive?'active':''}>
@@ -158,11 +203,10 @@ function Shell(){
      </span>
      <span>{label}</span>
     </NavLink>)}
-   <button type="button" className={accountActive?'active':''} aria-haspopup="menu" aria-expanded={accountOpen}
-     onClick={()=>setAccountOpen(o=>!o)}>
-    <span className="mobile-tabicon"><TabAvatar/></span>
+   <NavLink to="/profile" className={accountActive?'active':''}>
+    <span className="mobile-tabicon"><Avatar/></span>
     <span>Account</span>
-   </button>
+   </NavLink>
   </nav>}
  </div>;
 }

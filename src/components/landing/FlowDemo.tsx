@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 // A self-contained, looping "demo reel" rebuilt from the real LifeSwap screens
 // (dashboard ServiceRow, BookingDialog, messages chat) using the same tokens and
-// components — so it *is* the product, not an AI clip. Mock data only; no
+// components - so it *is* the product, not an AI clip. Mock data only; no
 // Firebase, no routing. Reduced motion parks on the final "message received"
 // frame instead of animating.
 
@@ -411,7 +411,7 @@ function ChatScene({ s, reduce }: { s: number; reduce: boolean }) {
               className="flex justify-start"
             >
               <div className="max-w-[82%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5 text-sm text-foreground">
-                Hi Eli! Looking forward to it — here&apos;s our meeting link 🔗{" "}
+                Hi Eli! Looking forward to it - here&apos;s our meeting link 🔗{" "}
                 <span className="font-medium text-primary underline">
                   meet.lifeswap.app/eli-daniel
                 </span>

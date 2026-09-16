@@ -147,7 +147,7 @@ export default function ServiceDetailPage() {
             <div>
               {isOwn ? (
                 <p className="text-sm text-muted-foreground">
-                  This is your own service — manage it from My Services.
+                  This is your own service - manage it from My Services.
                 </p>
               ) : booked ? (
                 <div className="flex flex-wrap items-center gap-3">

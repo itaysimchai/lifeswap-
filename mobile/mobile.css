@@ -29,10 +29,16 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
   min-height:44px;padding:0 4px;
   background:color-mix(in srgb,var(--color-background) 82%,transparent);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+/* Scroll edge effect: the rule only appears once content is actually underneath
+   the bar, so a page scrolled to the top reads as one uninterrupted surface. */
 .mobile-titlebar::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
-  background:var(--color-border);transform:scaleY(.5);transform-origin:bottom}
+  background:var(--color-border);transform:scaleY(.5);transform-origin:bottom;
+  opacity:0;transition:opacity .2s ease}
+.mobile-titlebar.collapsed::after{opacity:1}
 .mobile-titlebar h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;text-align:center;
-  color:var(--color-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  color:var(--color-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;transform:translateY(6px);transition:opacity .22s ease,transform .22s ease}
+.mobile-titlebar.collapsed h1{opacity:1;transform:none}
 .mobile-titlebar-slot{display:flex;align-items:center;justify-content:flex-start}
 .mobile-titlebar-slot.right{justify-content:flex-end;position:relative}
 .mobile-titlebar-slot button{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;
@@ -50,25 +56,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .mobile-avatar-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s ease}
 .mobile-avatar-img.ready{opacity:1}
 
-/* Account sheet, rising above the tab bar. */
-.mobile-sheet-root{position:fixed;inset:0;z-index:70}
-.mobile-sheet-scrim{position:absolute;inset:0;background:rgb(15 23 42 / .32);
-  animation:mobile-fade .18s ease}
-.mobile-sheet{position:absolute;left:8px;right:8px;
-  bottom:calc(8px + 60px + env(safe-area-inset-bottom));
-  display:flex;flex-direction:column;padding:6px;
-  background:var(--color-card);border:1px solid var(--color-border);border-radius:16px;
-  box-shadow:0 16px 40px rgb(15 23 42 / .22);animation:mobile-rise .22s cubic-bezier(.32,1.2,.5,1)}
-.mobile-sheet button{display:block;width:100%;min-height:50px;padding:0 14px;border:0;border-radius:11px;
-  background:none;font-size:16px;font-weight:500;text-align:left;color:var(--color-foreground);cursor:pointer}
-.mobile-sheet button:active{background:var(--color-muted)}
-.mobile-sheet button.danger{color:var(--color-destructive)}
-@keyframes mobile-fade{from{opacity:0}to{opacity:1}}
-@keyframes mobile-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-
 /* Tab bar - iOS metrics: ~49pt of content plus the home-indicator inset, a
    translucent material over the content, and a hairline (sub-pixel) top rule. */
-.mobile-tabbar{flex:none;position:relative;display:grid;grid-template-columns:repeat(4,1fr);
+.mobile-tabbar{flex:none;position:relative;z-index:80;display:grid;grid-template-columns:repeat(4,1fr);
   padding:6px 8px calc(6px + env(safe-area-inset-bottom));
   background:color-mix(in srgb,var(--color-card) 78%,transparent);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
@@ -90,7 +80,8 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
   transition:transform .2s cubic-bezier(.34,1.4,.64,1),opacity .18s ease}
 .mobile-tabbar a.active::after,.mobile-tabbar>button.active::after{transform:translateX(-50%) scale(1);opacity:1}
 @media (prefers-reduced-motion:reduce){.mobile-tabbar a,.mobile-tabbar>button,
-  .mobile-tabbar a::after,.mobile-tabbar>button::after,.mobile-sheet{transition:none;animation:none}}
+  .mobile-tabbar a::after,.mobile-tabbar>button::after,
+  .hover-lift{transition:none}}
 .mobile-tabbar a:active,.mobile-tabbar>button:active{opacity:.55}
 .mobile-tabbar a:focus-visible,.mobile-tabbar>button:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px;border-radius:10px}
 
@@ -108,4 +99,108 @@ input,textarea,select{font-size:16px!important}
 /* The native controller reports its actual overlap after layout/rotation.
    Keep content underneath the glass while allowing the last row to scroll clear. */
 .native-tabs .mobile-scroll{padding-bottom:var(--native-tab-inset,0px);scroll-padding-bottom:var(--native-tab-inset,0px)}
-.native-tabs .mobile-sheet{bottom:calc(8px + env(safe-area-inset-bottom))}
+
+/* ── In-app screens ─────────────────────────────────────────────────────────
+   The shared pages are built for desktop web. Inside the native shell they get
+   platform density, platform type, and touch feedback. The brand (Fraunces +
+   gold) stays on the auth and legal routes, which are not .in-app. */
+
+/* Stated once, in the chrome. The page keeps its own header on the web. */
+.mobile-app [data-page-header]{display:none}
+/* The header is still a DOM child, so a space-y-* parent goes on reserving its
+   gap; and where it shared a justify-between row, its action needs to keep the
+   right edge once the text beside it is gone. */
+.mobile-app [data-page-header]+*{margin-top:0;margin-left:auto}
+/* Rows that supply their own gutter span the container instead of nesting
+   inside its padding - a list of rows should touch both edges. */
+.mobile-app.in-app [data-fullbleed]{margin-inline:-16px}
+
+/* Large title: reading size at the top of the scroller, scrolling up into the
+   compact bar. Tracking is size-specific - tight here, near zero on body. */
+.mobile-largetitle{flex:none;padding:8px 16px 10px}
+.mobile-largetitle h1{margin:0;font-family:inherit;font-size:32px;line-height:1.12;
+  font-weight:700;letter-spacing:-.03em;color:var(--color-foreground)}
+.mobile-largetitle p{margin:5px 0 0;font-size:14px;line-height:1.35;letter-spacing:0;
+  color:var(--color-muted-foreground)}
+
+/* In-app screens use the platform face. SF already ships optical sizing,
+   tracking tables and Dynamic Type metrics that a webfont cannot match; Inter
+   remains the fallback, and the brand serif stays on auth and legal. */
+.mobile-app.in-app{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,var(--font-sans)}
+.mobile-app.in-app :is(h1,h2,h3,h4,h5,h6){font-family:inherit}
+.mobile-app.in-app :is(h1,h2){letter-spacing:-.02em}
+.mobile-app.in-app :is(h3,h4,h5,h6){letter-spacing:-.01em}
+
+/* Phone density. The web container is built for an 88rem desktop measure; at
+   390pt its padding plus the card's own p-6 eats an eighth of the screen. */
+.mobile-app .container-page{padding-inline:16px}
+.mobile-app.in-app .container-page{padding-block:12px;gap:0}
+.mobile-app.in-app [data-slot="card"]{border-radius:14px}
+.mobile-app.in-app [data-slot="card-header"]{padding:16px 16px 0}
+.mobile-app.in-app [data-slot="card-content"]{padding:16px}
+.mobile-app.in-app [data-slot="card-header"]+[data-slot="card-content"]{padding-top:12px}
+.mobile-app.in-app [data-slot="card-footer"]{padding:0 16px 16px}
+/* Call sites that spell the desktop padding out explicitly follow the same
+   scale; anything asking for deliberate breathing room (empty states) keeps it. */
+.mobile-app.in-app [data-slot="card-content"].p-6{padding:16px}
+
+/* Touch feedback. Everything in the shared pages is a :hover state, which never
+   fires on a finger - press feedback has to be immediate and on pointer-down. */
+.mobile-scroll :is(button,[role="button"],a,label[for]):not(:disabled):active{
+  opacity:.6;transition:opacity .06s ease-out}
+.mobile-scroll [data-slot="card"]:active:has(button,a){opacity:1}
+.mobile-scroll .hover-lift:active{transform:scale(.985);transition:transform .1s ease-out}
+/* iOS only applies :active to elements the page has claimed as touch targets. */
+.mobile-scroll :is(button,[role="button"],a){touch-action:manipulation}
+
+@media (prefers-reduced-motion:reduce){
+  .mobile-titlebar h1,.mobile-titlebar::after,.mobile-scroll .hover-lift:active{transition:none}
+  .mobile-titlebar h1{transform:none}}
+
+/* ── Chat thread ────────────────────────────────────────────────────────────
+   A conversation is a screen, not a card inside a scrolling page. The shell
+   scroller is switched off here so there is exactly one scroller - the
+   transcript - instead of two chaining into each other. */
+.mobile-app.thread .mobile-scroll{overflow:hidden;padding-bottom:0;scroll-padding-bottom:0}
+.mobile-app.thread .mobile-scroll>*{flex:1 1 auto;min-height:0}
+.mobile-app.thread .container-page{padding:0;max-width:none}
+.mobile-app.thread main{display:flex;flex-direction:column;min-height:0;height:100%}
+
+.mobile-thread{display:flex;flex-direction:column;min-height:0;height:100%}
+.mobile-thread-scroll{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;
+  padding:12px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+
+/* The composer rides above whichever chrome is currently at the bottom edge:
+   the keyboard when it is up, the native tab bar when it is not. The Swift side
+   hides the bar on keyboard presentation, which zeroes its inset, so taking the
+   larger of the two is always the right answer. */
+.mobile-composer{flex:none;display:flex;align-items:flex-end;gap:8px;
+  padding:8px 12px calc(8px + max(var(--keyboard-inset,0px),var(--native-tab-inset,0px)));
+  border-top:1px solid var(--color-border);
+  background:color-mix(in srgb,var(--color-card) 82%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  transition:padding-bottom .2s ease}
+@media (prefers-reduced-motion:reduce){.mobile-composer{transition:none}}
+
+/* Sticky filter chrome: the list scrolls under it, so the search field and the
+   category rail stay reachable without scrolling back to the top. Translucent
+   for the same reason the title bar is - the content should look continuous. */
+.mobile-app.in-app .mobile-filters{position:sticky;top:0;z-index:20;
+  padding:8px 0 10px;
+  background:color-mix(in srgb,var(--color-background) 84%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.mobile-app.in-app .mobile-filters::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:var(--color-border);transform:scaleY(.5);transform-origin:bottom}
+
+/* Horizontal rails run to both edges: a card clipped by the screen edge is the
+   affordance that says there is more to the right. */
+.mobile-app.in-app .mobile-rail{display:flex;gap:12px;overflow-x:auto;
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+  margin-inline:-16px;padding:2px 16px 4px}
+.mobile-app.in-app .mobile-rail>*{flex:0 0 78%;max-width:300px;scroll-snap-align:start}
+
+/* One frame without the filter forces Safari to recomposite these layers with
+   the new theme's tokens. See the theme-repaint effect in main.tsx. */
+.theme-repaint .mobile-titlebar,
+.theme-repaint .mobile-filters,
+.theme-repaint .mobile-composer{-webkit-backdrop-filter:none;backdrop-filter:none}

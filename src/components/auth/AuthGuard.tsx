@@ -7,7 +7,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import type { Role } from "@/lib/types";
 
 /**
- * Client-side route guard. UX only — Firestore Security Rules are the real
+ * Client-side route guard. UX only - Firestore Security Rules are the real
  * authorization boundary. Redirects unauthenticated users to /login and,
  * when `role` is given, anyone lacking that role back to /dashboard.
  */
