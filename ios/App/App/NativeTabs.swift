@@ -87,9 +87,14 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
         guard content.isViewLoaded, content.view.superview === view else { return }
         let subviews = view.subviews
         guard let contentIndex = subviews.firstIndex(of: content.view) else { return }
-        if let barIndex = subviews.firstIndex(of: tabBar) {
+        // On iOS 26 the bar lives inside a wrapper (_UITabBarContainerWrapperView)
+        // rather than directly in our view, so order against whichever ancestor
+        // of the bar is our direct subview. Looking only for tabBar itself sent
+        // the web view to the front, on top of the bar.
+        let barHost = sequence(first: tabBar as UIView, next: { $0.superview }).first { $0.superview === view }
+        if let barHost, let barIndex = subviews.firstIndex(of: barHost) {
             guard contentIndex != barIndex - 1 else { return }
-            view.insertSubview(content.view, belowSubview: tabBar)
+            view.insertSubview(content.view, belowSubview: barHost)
         } else {
             guard contentIndex != subviews.count - 1 else { return }
             view.bringSubviewToFront(content.view)
