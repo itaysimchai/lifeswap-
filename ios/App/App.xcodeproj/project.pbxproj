@@ -18,6 +18,8 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		ABCDEF012345678900000002 /* NativeTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDEF012345678900000001 /* NativeTabs.swift */; };
+		ABCDEF012345678900000004 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDEF012345678900000003 /* AppleSignIn.swift */; };
+		ABCDEF012345678900000006 /* GoogleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCDEF012345678900000005 /* GoogleSignIn.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +36,8 @@
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		ABCDEF012345678900000001 /* NativeTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabs.swift; sourceTree = "<group>"; };
+		ABCDEF012345678900000003 /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
+		ABCDEF012345678900000005 /* GoogleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignIn.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +74,8 @@
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				ABCDEF012345678900000001 /* NativeTabs.swift */,
+				ABCDEF012345678900000003 /* AppleSignIn.swift */,
+				ABCDEF012345678900000005 /* GoogleSignIn.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -168,6 +174,8 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				ABCDEF012345678900000002 /* NativeTabs.swift in Sources */,
+				ABCDEF012345678900000004 /* AppleSignIn.swift in Sources */,
+				ABCDEF012345678900000006 /* GoogleSignIn.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

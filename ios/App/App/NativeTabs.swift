@@ -6,6 +6,8 @@ final class LifeSwapBridgeViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(tabsPlugin)
+        bridge?.registerPluginInstance(AppleSignInPlugin())
+        bridge?.registerPluginInstance(GoogleSignInPlugin())
     }
 }
 

@@ -43,7 +43,7 @@ export function authErrorMessage(e: unknown): string {
     case "auth/popup-blocked":
       return "Your browser blocked the sign-in popup. Allow popups for this site and try again.";
     case "auth/operation-not-allowed":
-      return "Google sign-in isn't enabled for this project. Enable it in Firebase → Authentication → Sign-in method.";
+      return "This sign-in method isn't enabled for this project. Enable it in Firebase → Authentication → Sign-in method.";
     case "auth/unauthorized-domain":
       return "This site's domain isn't authorized. Add it in Firebase → Authentication → Settings → Authorized domains.";
     case "auth/account-exists-with-different-credential":

@@ -8,5 +8,8 @@ export const publicConfig = {
   "NEXT_PUBLIC_FIREBASE_APP_ID": "1:1007023347574:web:cd8826372c1ce155dc0c57",
   "NEXT_PUBLIC_USE_FIREBASE_EMULATOR": "false",
   "NEXT_PUBLIC_PAYPAL_CLIENT_ID": "AQM2ciH7rQyI86QYkX4Z49PevrRNoKBUF9DQlo5Z8gNLsT3JONIggG5QGiUMsUMzNy-egUGuG0b_DS_R",
-  "NEXT_PUBLIC_APP_URL": "https://lifeswapp.netlify.app"
+  "NEXT_PUBLIC_APP_URL": "https://lifeswapp.netlify.app",
+  // iOS-type OAuth client from the lifeswap-cd713 Google Cloud project.
+  // Empty keeps the Google button hidden in the iOS app.
+  "NEXT_PUBLIC_GOOGLE_IOS_CLIENT_ID": ""
 } as const;

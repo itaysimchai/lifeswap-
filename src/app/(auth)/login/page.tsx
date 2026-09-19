@@ -7,13 +7,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
 } from "firebase/auth";
 import { Eye, EyeOff, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GoogleIcon } from "@/components/ui/google-icon";
+import { SocialSignIn } from "@/components/auth/SocialSignIn";
 import { loginSchema, type LoginFormData } from "@/lib/validations";
 import { auth } from "@/lib/firebase";
 import { ensureUserDoc, authErrorMessage, homePathFor } from "@/lib/auth";
@@ -54,16 +52,6 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
-      await ensureUserDoc(cred.user);
-      router.push(explicitRedirect() ?? (await homePathFor(cred.user.uid)));
-    } catch (e) {
-      setError("root", { message: authErrorMessage(e) });
-    }
-  };
-
-  const onGoogle = async () => {
-    try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       await ensureUserDoc(cred.user);
       router.push(explicitRedirect() ?? (await homePathFor(cred.user.uid)));
     } catch (e) {
@@ -136,6 +124,15 @@ export default function LoginPage() {
           </Button>
 
         </form>
+
+        <SocialSignIn
+          verb="in"
+          onSignedIn={async ({ cred, displayName }) => {
+            await ensureUserDoc(cred.user, displayName);
+            router.push(explicitRedirect() ?? (await homePathFor(cred.user.uid)));
+          }}
+          onError={(e) => setError("root", { message: authErrorMessage(e) })}
+        />
 
         {/* Footer */}
         <div className="flex justify-center gap-1 text-sm text-muted-foreground">
