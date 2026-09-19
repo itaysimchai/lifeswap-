@@ -104,6 +104,19 @@ if [ -d "$EASROOT/node_modules/glob" ]; then
       const projs=globSync("ios/**/*.xcodeproj",{cwd:root}).map(p=>p.replace(/^\//,""));
       console.log("       pbxproj:", projs.map(v=>path.join(root,v,"project.pbxproj")).filter(v=>fs.existsSync(v)));
     ' "$EASROOT"; }
+
+  # getEntitlementsPath() joins CODE_SIGN_ENTITLEMENTS onto ios/, not onto the
+  # nested ios/App project, so without the ios/App/App.entitlements symlink it
+  # finds nothing. Capability sync then DISABLES Push on the App ID and every
+  # new profile lacks aps-environment, failing the archive.
+  node -e '
+    const {IOSConfig}=require(process.argv[1]+"/node_modules/@expo/config-plugins");
+    const p=IOSConfig.Entitlements.getEntitlementsPath(process.cwd(),{targetName:"App",buildConfiguration:"Release"});
+    if(!p) { console.error("no entitlements path"); process.exit(1); }
+    if(!require("fs").readFileSync(p,"utf8").includes("aps-environment")) { console.error("aps-environment missing"); process.exit(1); }
+  ' "$EASROOT" 2>/dev/null \
+    && pass "EAS finds App.entitlements with aps-environment (capability sync keeps Push on)" \
+    || fail "EAS cannot see the entitlements; capability sync would disable Push (check the ios/App/App.entitlements symlink)"
 else
   printf '  \033[33mskip\033[0m eas-cli not installed globally\n'
 fi
