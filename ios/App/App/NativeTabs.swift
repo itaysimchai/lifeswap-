@@ -44,6 +44,7 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
     private var wantsVisible = false
     private var keyboardVisible = false
     private var lastInset: CGFloat = -1
+    private var lastSafeArea: UIEdgeInsets?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -137,6 +138,26 @@ final class LifeSwapTabController: UITabBarController, UITabBarControllerDelegat
         super.viewDidLayoutSubviews()
         restoreContentOrder()
         publishInset()
+        publishSafeArea()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        publishSafeArea()
+    }
+
+    // UITabBarController only gives safe-area insets to the children it manages
+    // as tabs, and it zeroes them for the web view's controller no matter what
+    // additionalSafeAreaInsets says. So env(safe-area-inset-*) is 0 in the page;
+    // send the real values and let the CSS use them instead.
+    private func publishSafeArea() {
+        guard content.isViewLoaded else { return }
+        let insets = view.safeAreaInsets
+        guard insets != lastSafeArea else { return }
+        lastSafeArea = insets
+        content.tabsPlugin.notifyListeners("safeAreaChanged", data: [
+            "top": insets.top, "left": insets.left, "bottom": insets.bottom, "right": insets.right
+        ], retainUntilConsumed: true)
     }
 
     private func publishInset() {

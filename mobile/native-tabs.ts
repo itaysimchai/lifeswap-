@@ -7,8 +7,11 @@ interface NativeTabsPlugin {
   configure(options: { visible: boolean; selected: string; unread: boolean; theme: string }): Promise<{ available: boolean }>;
   addListener(event: 'tabSelected', listener: (event: { id: string }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'insetChanged', listener: (event: { bottom: number }) => void): Promise<PluginListenerHandle>;
+  addListener(event: 'safeAreaChanged', listener: (event: Record<SafeEdge, number>) => void): Promise<PluginListenerHandle>;
 }
 const NativeTabs = registerPlugin<NativeTabsPlugin>('NativeTabs');
+type SafeEdge = 'top' | 'left' | 'bottom' | 'right';
+const SAFE_EDGES: SafeEdge[] = ['top', 'left', 'bottom', 'right'];
 // Account is a destination now, not a menu: everything it used to offer lives
 // on the settings screen.
 const routes: Record<string, string> = { home: '/home', explore: '/dashboard', messages: '/messages', account: '/profile' };
@@ -38,6 +41,13 @@ export function useNativeTabs(signedIn: boolean, unread: boolean) {
         await listen(NativeTabs.addListener('insetChanged', ({ bottom }) => {
           document.documentElement.style.setProperty('--native-tab-inset', `${Math.max(0, bottom)}px`);
         }));
+        // The native tab controller hides the device safe area from the web
+        // view, so env(safe-area-inset-*) reads 0; mobile.css prefers these.
+        await listen(NativeTabs.addListener('safeAreaChanged', insets => {
+          for (const edge of SAFE_EDGES) {
+            document.documentElement.style.setProperty(`--safe-${edge}`, `${Math.max(0, insets[edge] ?? 0)}px`);
+          }
+        }));
         if (!disposed) setReady(true);
       } catch (error) {
         console.warn('Native navigation unavailable; using web tabs.', error);
@@ -49,6 +59,7 @@ export function useNativeTabs(signedIn: boolean, unread: boolean) {
       for (const handle of handles) void handle.remove();
       void NativeTabs.configure({ visible: false, selected: 'home', unread: false, theme: 'system' }).catch(() => {});
       document.documentElement.style.removeProperty('--native-tab-inset');
+      for (const edge of SAFE_EDGES) document.documentElement.style.removeProperty(`--safe-${edge}`);
     };
   }, []);
 

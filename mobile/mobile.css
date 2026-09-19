@@ -4,9 +4,9 @@
    WKWebView's own UIScrollView so the page can't rubber-band. Anything that
    needs to scroll must therefore live inside .mobile-scroll. */
 html,body,#root{height:100%;width:100%;margin:0;overflow:hidden;overscroll-behavior:none}
-body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);-webkit-tap-highlight-color:transparent}
+body{padding-left:var(--safe-left,env(safe-area-inset-left));padding-right:var(--safe-right,env(safe-area-inset-right));-webkit-tap-highlight-color:transparent}
 
-.mobile-app{height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.mobile-app{height:100dvh;display:flex;flex-direction:column;padding-top:var(--safe-top,env(safe-area-inset-top))}
 .mobile-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   display:flex;flex-direction:column}
 /* Give the routed page a definite height to resolve against, so layouts that
@@ -59,7 +59,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 /* Tab bar - iOS metrics: ~49pt of content plus the home-indicator inset, a
    translucent material over the content, and a hairline (sub-pixel) top rule. */
 .mobile-tabbar{flex:none;position:relative;z-index:80;display:grid;grid-template-columns:repeat(4,1fr);
-  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  padding:6px 8px calc(6px + var(--safe-bottom,env(safe-area-inset-bottom)));
   background:color-mix(in srgb,var(--color-card) 78%,transparent);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 .mobile-tabbar::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
@@ -93,7 +93,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 /* 16px keeps iOS from zooming the page when a field takes focus. */
 input,textarea,select{font-size:16px!important}
 
-[role=dialog]{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+[role=dialog]{max-height:calc(100dvh - var(--safe-top,env(safe-area-inset-top)) - var(--safe-bottom,env(safe-area-inset-bottom)) - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:640px){.container-page{padding-left:16px;padding-right:16px}button{touch-action:manipulation}}
 
 /* The native controller reports its actual overlap after layout/rotation.
